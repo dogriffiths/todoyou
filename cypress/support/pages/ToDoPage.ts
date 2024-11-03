@@ -11,7 +11,7 @@ import HabitItem from "../components/HabitItem";
 
 export default class ToDoPage extends CypressPage {
     constructor() {
-        super("/todoyou.html");
+        super("/index.html");
     }
 
     tab(tabId: string) {
