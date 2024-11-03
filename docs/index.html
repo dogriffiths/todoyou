@@ -13,11 +13,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
     <style>
         body {
-            background-image:url(todoyou_logo_300x55.png);
-            background-position:left 20px top 20px;
-            background-repeat:no-repeat;
             font-family:Arial,sans-serif;
-            margin:20px auto;
+            margin:0px auto;
             padding:20px;
             position:relative
         }
@@ -44,7 +41,7 @@
 
         #tasks-tab,#journal-tab,.tabs {
             margin:20px auto;
-            max-width:600px
+            max-width:600px;
         }
 
         .calendar-container {
@@ -314,7 +311,12 @@
         .tabs {
             border-bottom:2px solid #eee;
             display:flex;
-            margin-bottom:20px
+            margin-bottom:20px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE and Edge */
         }
 
         .task-checkbox {
@@ -417,6 +419,7 @@
             .calendar-container {
                 margin:0;
                 padding:10px
+                width: calc(100% - 100px);
             }
         }
 
@@ -663,7 +666,7 @@
             display:flex;
             font-size:.9em;
             justify-content:space-between;
-            margin:20px auto;
+            margin: 0px auto;
             max-width:900px;
             padding:8px 16px
         }
@@ -972,20 +975,34 @@
                 width:100%
             }
         }
+
+        .save-button {
+            position: relative;
+        }
+
+        [data-window-dirty="true"] .save-button {
+            background-color: #4CAF50;
+            color: white;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+        }
+
+        [data-window-dirty="true"] .save-button svg {
+            color: white;
+        }
     </style>
 </head>
 <body>
 <div class="privacy-notice">
     <span>🔒 All data is stored locally in your browser - nothing is sent to any server.</span>
     <div class="data-buttons">
-        <button onclick="exportDatabase()" class="data-button" title="CMD/CTRL-S">
+        <button onclick="exportDatabase()" class="data-button save-button" title="CMD/CTRL-S">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            Export
+            Save
         </button>
         <label class="data-button" title="CMD/CTRL-O">
             <input type="file" id="importInput" accept=".json" style="display: none;" onchange="handleImport(event)">
@@ -995,7 +1012,7 @@
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            Import
+            Open
         </label>
     </div>
 </div>
