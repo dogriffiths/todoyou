@@ -16,7 +16,10 @@
             font-family:Arial,sans-serif;
             padding-left:20px;
             padding-right:20px;
-            position:relative
+            margin-top: 0;
+            padding-top: 0;
+            position:relative;
+            overscroll-behavior: none
         }
 
         @media (max-width: 1600px) {
@@ -44,6 +47,11 @@
             margin-left: auto;
             margin-right: auto;
             max-width:600px;
+        }
+
+        .tabs {
+            max-width:640px;
+            overscroll-behavior: none
         }
 
         .calendar-container {
@@ -1006,6 +1014,72 @@
             width: 16px;
             height: 16px;
         }
+
+        /* Add these styles and modify existing .tabs styles */
+        .tabs {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #fff;
+            border-bottom: 2px solid #eee;
+            display: flex;
+            margin-bottom: 20px;
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 8px 20px; /* Add horizontal padding to match body padding */
+            box-sizing: border-box;
+        }
+
+        /* Adjust floating toolbar to appear above tabs */
+        .floating-toolbar {
+            z-index: 101;
+        }
+
+        /* Hide scrollbar but keep functionality */
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Style adjustments for tabs */
+        .tab {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 10px 20px;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 4px;
+        }
+
+        .tab.active {
+            color: #4CAF50;
+        }
+
+        .tab.active::after {
+            background: #4CAF50;
+            bottom: -10px;
+            content: '';
+            height: 2px;
+            left: 0;
+            position: absolute;
+            right: 0;
+        }
+
+        /* Adjust content positioning */
+        .tab-content {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -1040,7 +1114,6 @@
 
 <div id="tasks-tab" class="tab-content active">
     <div class="todo-container">
-        <h2>TODO List</h2>
         <div class="input-container">
             <input type="text" id="newTask" placeholder="Enter a new task">
             <button onclick="addTask()">Add Task</button>
@@ -1137,7 +1210,6 @@
 </div>
 <div id="journal-tab" class="tab-content">
     <div class="journal-container">
-        <h2>Journal</h2>
         <div id="journalList" class="journal-list">
         </div>
     </div>
