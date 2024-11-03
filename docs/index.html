@@ -1125,6 +1125,43 @@
                 min-width: 80px;
             }
         }
+
+        .tab.active {
+            background: #fff;
+            color: #444;
+            height: 33px;
+            margin-bottom: -1px;
+            font-weight: 500;
+            border-top: 1px solid #ccc;
+            border-left: 1px solid #ccc;
+            border-right: 1px solid #ccc;
+            border-bottom: 1px solid #fff;
+            transition: all 0.2s ease;
+        }
+
+        /* Active tab when window has focus */
+        html.window-focused .tabs .tab.active {
+            background: #4CAF50;
+            color: #fff;
+            border-color: #45a049;
+        }
+
+        /* Hover state for active tab when window has focus */
+        html.window-focused .tabs .tab.active:hover {
+            background: #45a049;
+            color: #fff;
+        }
+
+        /* Remove the green bottom border when tab is active and window has focus */
+        html.window-focused .tabs .tab.active::after {
+            display: none;
+        }
+
+        /* Keep existing hover state for inactive tabs */
+        .tab:not(.active):hover {
+            background: #d7d7db;
+            color: #444;
+        }
     </style>
 </head>
 <body>
@@ -4371,6 +4408,19 @@
             }
         });
     });
+
+    window.addEventListener('focus', () => {
+        document.documentElement.classList.add('window-focused');
+    });
+
+    window.addEventListener('blur', () => {
+        document.documentElement.classList.remove('window-focused');
+    });
+
+    // Initialize focus state on page load
+    if (document.hasFocus()) {
+        document.documentElement.classList.add('window-focused');
+    }
 </script>
 </body>
 </html>
