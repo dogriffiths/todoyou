@@ -1178,7 +1178,93 @@
     let currentContexts = new Set();
     let selectedSuggestionIndex = -1;
 
-    const CACHE_NAME = 'todoyou-v1';
+    // First, check if running in PWA mode
+    const isPWA = () => {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+            window.navigator.standalone ||
+            document.referrer.includes('android-app://');
+    };
+
+    class WindowStateController {
+        constructor() {
+            // Only proceed if we're in PWA mode and on macOS
+            if (!isPWA() || !navigator.platform.includes('Mac')) {
+                return;
+            }
+
+            this.isDirty = false;
+            this.setupTitleObserver();
+            this.setupWindowControls();
+        }
+
+        setupTitleObserver() {
+            // Create hidden element to observe title changes
+            this.titleElem = document.createElement('title');
+            document.head.appendChild(this.titleElem);
+
+            // Observe title changes
+            this.observer = new MutationObserver(() => {
+                this.updateWindowState();
+            });
+
+            this.observer.observe(this.titleElem, {
+                subtree: true,
+                characterData: true,
+                childList: true
+            });
+        }
+
+        setupWindowControls() {
+            // Add window controls stylesheet
+            const style = document.createElement('style');
+            style.textContent = `
+      @media (display-mode: standalone) {
+        /* Target the close button using the proper macOS window controls class */
+        :root[data-window-dirty="true"] .window-controls .close-button::after {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 4px;
+          height: 4px;
+          background-color: #000;
+          border-radius: 50%;
+          opacity: 0.5;
+        }
+      }
+    `;
+            document.head.appendChild(style);
+        }
+
+        setDirty(isDirty) {
+            this.isDirty = isDirty;
+            this.updateWindowState();
+        }
+
+        updateWindowState() {
+            document.documentElement.setAttribute('data-window-dirty', this.isDirty);
+
+            // Update window title with a dot for dirty state
+            const currentTitle = document.title;
+            const hasUnsavedDot = currentTitle.startsWith('●');
+
+            if (this.isDirty && !hasUnsavedDot) {
+                document.title = `●${currentTitle}`;
+            } else if (!this.isDirty && hasUnsavedDot) {
+                document.title = currentTitle.substring(1);
+            }
+        }
+
+        // Cleanup method
+        destroy() {
+            if (this.observer) {
+                this.observer.disconnect();
+            }
+        }
+    }
+
+    const windowState = new WindowStateController();
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -1468,6 +1554,7 @@
                     await updateContextFilter();
 
                     loadKanban();
+                    windowState.setDirty(true);
                     showStatus('Task added successfully');
                 };
             };
@@ -1811,6 +1898,7 @@
                     loadKanban();
                     updateCalendar();
                     closeEditDialog();
+                    windowState.setDirty(true);
                     showStatus('Task updated successfully');
                 };
             };
@@ -1900,6 +1988,7 @@
                     updateCalendar();
                     loadJournal();
                     loadCompletedTasks();
+                    windowState.setDirty(true);
                     showStatus('Task completed successfully');
                 }
             };
@@ -3213,6 +3302,7 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
+            windowState.setDirty(false);
             showStatus('Database exported successfully');
         } catch (error) {
             console.error('Error exporting database:', error);
@@ -3267,6 +3357,7 @@
             loadKanban();
             loadJournal();
             updateCalendar();
+            windowState.setDirty(false);
 
             showStatus('Database imported successfully');
         } catch (error) {
