@@ -5,7 +5,7 @@
   "start_url": "/todoyou/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#4CAF50",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "/todoyou/icons/icon-64x64.png",
