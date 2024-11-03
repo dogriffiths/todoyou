@@ -432,11 +432,12 @@
             background:#45a049
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 960px) {
             .calendar-container {
-                margin:0;
-                padding:10px
-                width: calc(100% - 100px);
+                margin-left: 10px;
+                margin-right: 10px;
+                padding:10px;
+                width: calc(100% - 40px);
             }
         }
 
@@ -454,7 +455,7 @@
             text-align:center
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 960px) {
             .calendar-weekdays {
                 display:none
             }
@@ -466,7 +467,7 @@
             grid-template-columns:repeat(7,1fr)
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 960px) {
             .calendar-days {
                 gap:8px;
                 grid-template-columns:1fr
@@ -482,7 +483,7 @@
             padding:8px
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 960px) {
             .calendar-day {
                 align-items:flex-start;
                 flex-direction:row;
