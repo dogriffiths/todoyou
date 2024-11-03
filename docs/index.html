@@ -1020,7 +1020,7 @@
         Save
     </button>
     <label class="data-button" title="CMD/CTRL-O">
-        <input type="file" id="importInput" accept=".json" style="display: none;" onchange="handleImport(event)">
+        <input type="file" id="importInput" accept=".json,.txt,.csv,.opml,.org" style="display: none;" onchange="handleImport(event)">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -1628,14 +1628,62 @@
         }
     }
 
-    function handleImport(event) {
+    async function handleImport(event) {
         const file = event.target.files[0];
-        if (file) {
-            importDatabase(file);
+        if (!file) return;
+
+        try {
+            // First try to parse as JSON
+            const content = await file.text();
+            let isJson = false;
+
+            try {
+                JSON.parse(content);
+                isJson = true;
+            } catch (e) {
+                // Not JSON, will handle as regular file
+                isJson = false;
+            }
+
+            if (isJson) {
+                // Handle as database import
+                await importDatabase(file);
+            } else {
+                // Handle as regular file import based on extension
+                const fileExt = file.name.toLowerCase().split('.').pop();
+                let tasks;
+
+                switch (fileExt) {
+                    case 'org':
+                        tasks = parseOrgToTasks(content);
+                        break;
+                    case 'opml':
+                        tasks = parseOPMLToTasks(content);
+                        break;
+                    case 'csv':
+                        tasks = await parseCSVToTasks(content);
+                        break;
+                    case 'txt':
+                    default:
+                        // Treat unknown extensions as text files
+                        tasks = parseTextToTasks(content);
+                        break;
+                }
+
+                await importTasks(tasks);
+                windowState.setDirty(true);
+            }
+        } catch (error) {
+            console.error('Error processing import:', error);
+            showStatus(`Error processing import: ${error.message}`, true);
         }
+
         // Reset the input so the same file can be imported again if needed
         event.target.value = '';
     }
+
+    // Update the global handleImport function
+    window.handleImport = handleImport;
 
     function setupAutoReset() {
         // Check how long until next midnight
@@ -4198,12 +4246,9 @@
                 // Create and trigger file input
                 const input = document.createElement('input');
                 input.type = 'file';
-                input.accept = '.json';
+                input.accept = '.json,.txt,.csv,.opml,.org';
                 input.onchange = (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        importDatabase(file);
-                    }
+                    handleImport(e);
                 };
                 input.click();
             }
