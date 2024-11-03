@@ -1218,23 +1218,48 @@
             // Add window controls stylesheet
             const style = document.createElement('style');
             style.textContent = `
-      @media (display-mode: standalone) {
-        /* Target the close button using the proper macOS window controls class */
-        :root[data-window-dirty="true"] .window-controls .close-button::after {
-          content: "";
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 4px;
-          height: 4px;
-          background-color: #000;
-          border-radius: 50%;
-          opacity: 0.5;
-        }
-      }
-    `;
+            @media (display-mode: standalone) {
+                /* Target the traffic light controls */
+                :root[data-window-dirty="true"] .traffic-lights {
+                    position: relative;
+                }
+
+                :root[data-window-dirty="true"] .traffic-lights::before {
+                    content: "";
+                    position: absolute;
+                    width: 4px;
+                    height: 4px;
+                    background: #000;
+                    border-radius: 50%;
+                    top: 50%;
+                    left: 6px;
+                    transform: translateY(-50%);
+                    opacity: 0.5;
+                    pointer-events: none;
+                    z-index: 10;
+                }
+
+                /* Alternative selectors for different versions */
+                :root[data-window-dirty="true"] .window-controls-traffic-lights::before {
+                    content: "";
+                    position: absolute;
+                    width: 4px;
+                    height: 4px;
+                    background: #000;
+                    border-radius: 50%;
+                    top: 50%;
+                    left: 6px;
+                    transform: translateY(-50%);
+                    opacity: 0.5;
+                    pointer-events: none;
+                    z-index: 10;
+                }
+            }
+        `;
             document.head.appendChild(style);
+
+            // Add data attribute to root element
+            document.documentElement.setAttribute('data-window-dirty', 'false');
         }
 
         setDirty(isDirty) {
@@ -1253,6 +1278,14 @@
                 document.title = `●${currentTitle}`;
             } else if (!this.isDirty && hasUnsavedDot) {
                 document.title = currentTitle.substring(1);
+            }
+
+            // Force repaint of window controls
+            const trafficLights = document.querySelector('.traffic-lights, .window-controls-traffic-lights');
+            if (trafficLights) {
+                trafficLights.style.display = 'none';
+                trafficLights.offsetHeight; // Force reflow
+                trafficLights.style.display = '';
             }
         }
 
