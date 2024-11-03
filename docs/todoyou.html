@@ -1,0 +1,4038 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ToDoYou</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="64x64" href="task_icon_64x64.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
+    <style>
+        body {
+            background-image:url(todoyou_logo_300x55.png);
+            background-position:left 20px top 20px;
+            background-repeat:no-repeat;
+            font-family:Arial,sans-serif;
+            margin:20px auto;
+            padding:20px;
+            position:relative
+        }
+
+        @media (max-width: 1600px) {
+            body {
+                background-size:200px 38px
+            }
+        }
+
+        #newTask {
+            border:1px solid #ddd;
+            border-radius:4px;
+            flex-grow:1;
+            padding:8px
+        }
+
+        #status {
+            color:#666;
+            font-size:.9em;
+            margin-top:10px;
+            text-align:center
+        }
+
+        #tasks-tab,#journal-tab,.tabs {
+            margin:20px auto;
+            max-width:600px
+        }
+
+        .calendar-container {
+            background:#fff;
+            border-radius:8px;
+            margin:0 auto;
+            max-width:900px;
+            padding:0;
+            width:100%
+        }
+
+        .calendar-header {
+            align-items:center;
+            display:flex;
+            justify-content:space-between;
+            margin-bottom:20px;
+            max-width:940px;
+            width:100%
+        }
+
+        .comment-date {
+            color:#888;
+            font-size:.8em
+        }
+
+        .comment-input {
+            display:flex;
+            gap:10px;
+            margin-top:10px
+        }
+
+        .comment-input input,.journal-content {
+            flex-grow:1
+        }
+
+        .comment-item {
+            border-bottom:1px solid #eee;
+            font-size:.9em;
+            padding:8px
+        }
+
+        .comments-list {
+            margin-top:10px;
+            max-height:200px;
+            overflow-y:auto
+        }
+
+        .delete-button {
+            background:none;
+            border:none;
+            color:#666;
+            cursor:pointer;
+            display:none;
+            opacity:.6;
+            padding:4px
+        }
+
+        .delete-button:hover {
+            color:#f44;
+            opacity:1
+        }
+
+        .delete-confirmation {
+            background:#fff;
+            border-radius:8px;
+            box-shadow:0 2px 10px #0000001a;
+            left:50%;
+            padding:20px;
+            position:fixed;
+            top:50%;
+            transform:translate(-50%,-50%);
+            z-index:1000
+        }
+
+        .delete-confirmation-overlay {
+            align-items:center;
+            background:#00000080;
+            bottom:0;
+            display:flex;
+            justify-content:center;
+            left:0;
+            position:fixed;
+            right:0;
+            top:0;
+            z-index:999
+        }
+
+        .dialog {
+            background:#fff;
+            border-radius:8px;
+            max-width:500px;
+            padding:20px;
+            width:90%
+        }
+
+        .dialog input,.dialog textarea {
+            border:1px solid #ddd;
+            border-radius:4px;
+            box-sizing:border-box;
+            margin:10px 0;
+            padding:8px;
+            width:100%
+        }
+
+        .dialog textarea {
+            height:100px;
+            resize:vertical
+        }
+
+        .dialog-buttons {
+            display:flex;
+            gap:10px;
+            justify-content:flex-end;
+            margin-top:20px
+        }
+
+        .dialog-buttons button.cancel {
+            background:#666
+        }
+
+        .dialog-overlay {
+            align-items:center;
+            background:#00000080;
+            bottom:0;
+            display:none;
+            justify-content:center;
+            left:0;
+            position:fixed;
+            right:0;
+            top:0
+        }
+
+        .dragging {
+            opacity:.5
+        }
+
+        .input-container {
+            display:flex;
+            gap:10px;
+            margin-bottom:20px
+        }
+
+        .journal-day {
+            margin-bottom:20px
+        }
+
+        .journal-day-header {
+            border-bottom:2px solid #eee;
+            color:#666;
+            font-weight:700;
+            margin-bottom:10px;
+            padding:10px 0
+        }
+
+        .journal-description {
+            color:#666;
+            font-size:.9em;
+            margin-top:4px
+        }
+
+        .journal-item {
+            align-items:flex-start;
+            background:#fff;
+            border-radius:4px;
+            display:flex;
+            margin-bottom:5px;
+            padding:8px;
+            padding-right:40px;
+            position:relative
+        }
+
+        .journal-item .delete-button {
+            background:none;
+            border:none;
+            color:#666;
+            cursor:pointer;
+            display:block;
+            opacity:0;
+            padding:4px;
+            position:absolute;
+            right:8px;
+            top:50%;
+            transform:translateY(-50%);
+            transition:opacity .2s ease
+        }
+
+        .journal-item .delete-button:hover {
+            background:#f5f5f5;
+            border-radius:4px;
+            color:#f44
+        }
+
+        .journal-item:hover .delete-button {
+            opacity:1
+        }
+
+        .journal-time {
+            color:#666;
+            font-size:.9em;
+            min-width:80px
+        }
+
+        .journal-title {
+            font-weight:500
+        }
+
+        .page-drop-message {
+            background:#fff;
+            border:2px dashed #4CAF50;
+            border-radius:8px;
+            box-shadow:0 2px 10px #0000001a;
+            color:#4CAF50;
+            font-size:1.2em;
+            padding:20px 40px
+        }
+
+        .page-drop-overlay {
+            align-items:center;
+            background:#4caf5033;
+            bottom:0;
+            display:none;
+            justify-content:center;
+            left:0;
+            pointer-events:none;
+            position:fixed;
+            right:0;
+            top:0;
+            z-index:1000
+        }
+
+        .page-drop-overlay.visible {
+            display:flex
+        }
+
+        .tab {
+            background:none;
+            border:none;
+            color:#666;
+            cursor:pointer;
+            font-size:16px;
+            padding:10px 20px;
+            position:relative
+        }
+
+        .tab-content {
+            display:none
+        }
+
+        .tab.active {
+            color:#4CAF50
+        }
+
+        .tab.active::after {
+            background:#4CAF50;
+            bottom:-2px;
+            content:'';
+            height:2px;
+            left:0;
+            position:absolute;
+            right:0
+        }
+
+        .tab:hover {
+            color:#fff
+        }
+
+        .tabs {
+            border-bottom:2px solid #eee;
+            display:flex;
+            margin-bottom:20px
+        }
+
+        .task-checkbox {
+            margin-right:10px
+        }
+
+        .task-comments {
+            border-left:2px solid #eee;
+            color:#666;
+            font-size:.8em;
+            padding-left:0
+        }
+
+        .task-description {
+            color:#666;
+            font-size:.8em;
+            margin-top:4px
+        }
+
+        .task-due-date {
+            color:#666;
+            font-size:.8em
+        }
+
+        .task-due-date.overdue {
+            color:#f44
+        }
+
+        .task-item {
+            align-items:center;
+            background:#fff;
+            border-left:4px solid transparent;
+            border-radius:4px;
+            cursor:move;
+            display:flex;
+            margin-bottom:5px;
+            min-height:27px;
+            padding:10px
+        }
+
+        .task-item:hover .delete-button,.tab-content.active {
+            display:block
+        }
+
+        .task-item[data-section="done"] {
+            border-left-color:#4caf50
+        }
+
+        .task-item[data-section="in progress"] {
+            border-left-color:#2196f3
+        }
+
+        .task-item[data-section="todo"] {
+            border-left-color:#ff9800
+        }
+
+        .task-list,.journal-list {
+            list-style:none;
+            padding:0
+        }
+
+        .task-metadata {
+            color:#666;
+            display:flex;
+            font-size:.8em;
+            gap:12px
+        }
+
+        .task-metadata span {
+            white-space:nowrap
+        }
+
+        .task-text {
+            cursor:pointer;
+            flex-grow:1
+        }
+
+        .todo-container,.journal-container {
+            background:#f5f5f5;
+            border-radius:8px;
+            box-shadow:0 2px 4px #0000001a;
+            margin-bottom:20px;
+            padding:20px
+        }
+
+        button {
+            background:#4CAF50;
+            border:none;
+            border-radius:4px;
+            color:#fff;
+            cursor:pointer;
+            padding:8px 16px
+        }
+
+        button:hover {
+            background:#45a049
+        }
+
+        @media (max-width: 768px) {
+            .calendar-container {
+                margin:0;
+                padding:10px
+            }
+        }
+
+        .calendar-grid {
+            display:flex;
+            flex-direction:column
+        }
+
+        .calendar-weekdays {
+            display:grid;
+            font-weight:700;
+            gap:4px;
+            grid-template-columns:repeat(7,1fr);
+            margin-bottom:10px;
+            text-align:center
+        }
+
+        @media (max-width: 768px) {
+            .calendar-weekdays {
+                display:none
+            }
+        }
+
+        .calendar-days {
+            display:grid;
+            gap:4px;
+            grid-template-columns:repeat(7,1fr)
+        }
+
+        @media (max-width: 768px) {
+            .calendar-days {
+                gap:8px;
+                grid-template-columns:1fr
+            }
+        }
+
+        .calendar-day {
+            border:1px solid #eee;
+            border-radius:4px;
+            display:flex;
+            flex-direction:column;
+            min-height:100px;
+            padding:8px
+        }
+
+        @media (max-width: 768px) {
+            .calendar-day {
+                align-items:flex-start;
+                flex-direction:row;
+                gap:12px;
+                min-height:auto
+            }
+
+            .calendar-day .day-header {
+                display:flex;
+                flex-direction:column;
+                min-width:100px
+            }
+
+            .calendar-day .weekday-label {
+                color:#666;
+                display:block;
+                font-size:.8em;
+                margin-bottom:2px
+            }
+
+            .calendar-day.different-month {
+                display:none
+            }
+        }
+
+        .calendar-day-tasks {
+            flex-grow:1;
+            font-size:.8em;
+            margin-top:4px;
+            overflow:hidden
+        }
+
+        .calendar-day.has-tasks {
+            background:#c8e6c9
+        }
+
+        .calendar-day.today {
+            background:#e8f5e9;
+            font-weight:700
+        }
+
+        .calendar-day:hover {
+            background:#f5f5f5
+        }
+
+        @media (max-width: 768px) {
+            .calendar-day-tasks {
+                margin-top:0;
+                max-width:none
+            }
+
+            .calendar-day-tasks div {
+                margin-bottom:4px;
+                max-width:none;
+                white-space:normal
+            }
+        }
+
+        .clear-filter {
+            background:#666;
+            border:none;
+            border-radius:4px;
+            color:#fff;
+            cursor:pointer;
+            font-size:.9em;
+            padding:6px 12px
+        }
+
+        .clear-filter:hover {
+            background:#555
+        }
+
+        .context-badge {
+            background:#e0e0e0;
+            border-radius:12px;
+            color:#666;
+            display:inline-block;
+            font-size:.8em;
+            margin-right:8px;
+            padding:4px 8px
+        }
+
+        .context-select {
+            border:1px solid #ddd;
+            border-radius:4px;
+            cursor:pointer;
+            min-width:150px;
+            padding:6px
+        }
+
+        .data-button {
+            align-items:center;
+            background:#fff;
+            border:1px solid #ddd;
+            border-radius:4px;
+            color:#666;
+            cursor:pointer;
+            display:inline-flex;
+            font-size:.9em;
+            gap:6px;
+            padding:6px 12px;
+            transition:all .2s ease
+        }
+
+        .data-button svg {
+            height:16px;
+            width:16px
+        }
+
+        .data-button:hover {
+            background:#f0f0f0;
+            border-color:#ccc
+        }
+
+        .data-buttons {
+            display:flex;
+            gap:8px
+        }
+
+        .filter-container {
+            align-items:center;
+            display:flex;
+            gap:10px;
+            margin-bottom:15px
+        }
+
+        .kanban-column {
+            background:#f5f5f5;
+            border-radius:8px;
+            display:flex;
+            flex:1;
+            flex-direction:column;
+            min-width:300px;
+            padding:16px
+        }
+
+        .kanban-column-content {
+            flex:1;
+            min-height:100px
+        }
+
+        .kanban-column-header {
+            border-bottom:2px solid #ddd;
+            font-size:1.2em;
+            font-weight:700;
+            margin-bottom:16px;
+            padding-bottom:8px
+        }
+
+        .kanban-column.drag-over {
+            background:#e8f5e9
+        }
+
+        .kanban-container {
+            display:flex;
+            gap:20px;
+            min-height:600px;
+            overflow-x:auto;
+            padding:20px
+        }
+
+        .kanban-placeholder {
+            border:2px dashed #ccc;
+            border-radius:4px;
+            height:80px;
+            margin-bottom:8px
+        }
+
+        .kanban-task {
+            background:#fff;
+            border-radius:4px;
+            box-shadow:0 1px 3px #0000001a;
+            cursor:move;
+            margin-bottom:8px;
+            padding:12px
+        }
+
+        .kanban-task-description {
+            color:#666;
+            font-size:.9em
+        }
+
+        .kanban-task-title {
+            font-weight:500;
+            margin-bottom:4px
+        }
+
+        .kanban-task:hover {
+            box-shadow:0 2px 5px #0003
+        }
+
+        .privacy-notice {
+            align-items:center;
+            background:#f5f5f5;
+            border-radius:8px;
+            box-shadow:0 1px 3px #0000001a;
+            color:#666;
+            display:flex;
+            font-size:.9em;
+            justify-content:space-between;
+            margin:20px auto;
+            max-width:900px;
+            padding:8px 16px
+        }
+
+        .task-dot {
+            background:#4CAF50;
+            border-radius:50%;
+            height:6px;
+            margin:2px auto;
+            width:6px
+        }
+
+        @media (max-width: 768px) {
+            .privacy-notice {
+                flex-direction:column;
+                gap:12px;
+                margin:20px;
+                padding:12px;
+                text-align:center
+            }
+        }
+
+        .autocomplete-container {
+            display:flex;
+            flex:1;
+            position:relative
+        }
+
+        .autocomplete-container input {
+            flex:1;
+            width:100%
+        }
+
+        .best-streak {
+            background:#e8f5e9;
+            color:#2e7d32
+        }
+
+        .current-streak {
+            background:#e3f2fd;
+            color:#1976d2
+        }
+
+        .daily-habit-container {
+            align-items:center;
+            align-items:center;
+            display:flex;
+            display:flex;
+            flex:1;
+            gap:4px;
+            gap:8px;
+            margin-right:8px
+        }
+
+        .daily-habit-icon {
+            align-items:center;
+            align-items:center;
+            background:#e8f5e9;
+            background:#e8f5e9;
+            border-radius:12px;
+            border-radius:12px;
+            color:#2e7d32;
+            color:#2e7d32;
+            display:flex;
+            display:flex;
+            font-size:.8em;
+            font-size:.8em;
+            gap:4px;
+            gap:4px;
+            padding:2px 8px;
+            padding:2px 8px
+        }
+
+        .daily-habit-icon span {
+            align-items:center;
+            display:inline-flex
+        }
+
+        .form-group .daily-habit-label {
+            align-items:center;
+            align-items:center;
+            color:#2e7d32;
+            color:#2e7d32;
+            display:flex;
+            display:flex;
+            font-size:.9em;
+            font-size:.9em;
+            gap:8px;
+            gap:8px
+        }
+
+        .habit-description {
+            color:#666;
+            color:#666;
+            font-size:.9em;
+            font-size:.9em
+        }
+
+        .habit-info {
+            flex-grow:1;
+            flex-grow:1
+        }
+
+        .habit-item {
+            align-items:center;
+            align-items:center;
+            background:#fff;
+            background:#fff;
+            border-left:4px solid #4CAF50;
+            border-left:4px solid #4CAF50;
+            border-radius:4px;
+            border-radius:4px;
+            display:flex;
+            display:flex;
+            justify-content:space-between;
+            justify-content:space-between;
+            margin-bottom:10px;
+            margin-bottom:10px;
+            padding:15px;
+            padding:15px
+        }
+
+        .habit-last-update {
+            color:#666;
+            color:#666;
+            font-size:.8em;
+            font-size:.8em;
+            margin-top:4px;
+            margin-top:4px
+        }
+
+        .habit-name {
+            font-weight:500;
+            font-weight:500;
+            margin-bottom:4px;
+            margin-bottom:4px
+        }
+
+        .habit-sort {
+            background:#fff;
+            border:1px solid #ddd;
+            border-radius:4px;
+            padding:6px
+        }
+
+        .habit-stats {
+            align-items:center;
+            display:flex;
+            gap:16px
+        }
+
+        .habit-streak {
+            align-items:center;
+            background:#e8f5e9;
+            border-radius:12px;
+            color:#2e7d32;
+            display:flex;
+            font-weight:700;
+            gap:6px;
+            padding:4px 12px
+        }
+
+        .habit-streak-icon {
+            color:#ff6b6b
+        }
+
+        .habits-container {
+            background:#f5f5f5;
+            border-radius:8px;
+            box-shadow:0 2px 4px #0000001a;
+            margin:20px auto;
+            max-width:600px;
+            padding:20px
+        }
+
+        .habits-header {
+            align-items:center;
+            display:flex;
+            justify-content:space-between;
+            margin-bottom:20px
+        }
+
+        .no-habits {
+            color:#666;
+            font-style:italic;
+            padding:20px;
+            text-align:center
+        }
+
+        .sort-controls {
+            align-items:center;
+            display:flex;
+            gap:8px
+        }
+
+        .sort-direction {
+            background:#fff;
+            border:1px solid #ddd;
+            border-radius:4px;
+            cursor:pointer;
+            padding:6px 10px
+        }
+
+        .streak-badge {
+            align-items:center;
+            border-radius:12px;
+            display:flex;
+            font-weight:700;
+            gap:6px;
+            padding:4px 12px
+        }
+
+        .streak-chart {
+            background:#fff;
+            border:1px solid #eee;
+            border-radius:8px;
+            height:300px;
+            margin-bottom:20px;
+            padding:20px
+        }
+
+        .streak-count {
+            align-items:center;
+            align-items:center;
+            color:#ff6b6b;
+            color:#ff6b6b;
+            display:flex;
+            display:flex;
+            font-size:.9em;
+            font-size:.9em;
+            font-weight:700;
+            font-weight:bold
+        }
+
+        .suggestion-item {
+            border-bottom:1px solid #eee;
+            cursor:pointer;
+            padding:8px 16px
+        }
+
+        .suggestion-item.selected {
+            background:#e8f5e9
+        }
+
+        .suggestion-item:hover {
+            background:#f5f5f5
+        }
+
+        .suggestion-item:last-child {
+            border-bottom:none
+        }
+
+        .suggestions-container {
+            background:#fff;
+            border:1px solid #ddd;
+            border-radius:4px;
+            box-shadow:0 2px 4px #0000001a;
+            display:none;
+            left:0;
+            max-height:200px;
+            overflow-y:auto;
+            position:absolute;
+            right:0;
+            top:calc(100% + 4px);
+            z-index:1000
+        }
+
+        .task-content-wrapper {
+            display:flex;
+            flex:1;
+            flex-direction:column
+        }
+
+        .task-header,.streak-header {
+            align-items:center;
+            display:flex;
+            gap:8px
+        }
+
+        .task-item {
+            align-items:center;
+            background:#fff;
+            border-left:4px solid transparent;
+            border-radius:4px;
+            cursor:move;
+            display:flex;
+            gap:10px;
+            margin-bottom:5px;
+            padding:10px
+        }
+
+        .trophy-icon {
+            color:#FFD700;
+            font-size:24px
+        }
+
+        @media (max-width: 768px) {
+            .habit-item {
+                align-items:flex-start;
+                flex-direction:column;
+                gap:12px
+            }
+
+            .habit-stats {
+                justify-content:flex-start;
+                width:100%
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="privacy-notice">
+    <span>🔒 All data is stored locally in your browser - nothing is sent to any server.</span>
+    <div class="data-buttons">
+        <button onclick="exportDatabase()" class="data-button" title="CMD/CTRL-S">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Export
+        </button>
+        <label class="data-button" title="CMD/CTRL-O">
+            <input type="file" id="importInput" accept=".json" style="display: none;" onchange="handleImport(event)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Import
+        </label>
+    </div>
+</div>
+<div class="tabs">
+    <button class="tab active" data-tab="tasks">Tasks</button>
+    <button class="tab" data-tab="habits">Habits</button>
+    <button class="tab" data-tab="kanban">Kanban</button>
+    <button class="tab" data-tab="calendar">Calendar</button>
+    <button class="tab" data-tab="journal">Journal</button>
+</div>
+
+<div id="tasks-tab" class="tab-content active">
+    <div class="todo-container">
+        <h2>TODO List</h2>
+        <div class="input-container">
+            <input type="text" id="newTask" placeholder="Enter a new task">
+            <button onclick="addTask()">Add Task</button>
+        </div>
+        <div class="filter-container">
+            <select id="contextFilter" class="context-select">
+                <option value="">All Contexts</option>
+            </select>
+            <button id="clearFilter" class="clear-filter" style="display: none;">Clear Filter</button>
+        </div>
+        <ul id="taskList" class="task-list">
+        </ul>
+        <div class="completed-tasks-section" style="margin-top: 20px;">
+            <div class="section-header" style="display: flex; align-items: center; margin-bottom: 10px;">
+                <button id="toggleCompletedBtn" class="toggle-completed"
+                        style="background: none; border: none; color: #666; cursor: pointer; display: flex; align-items: center; padding: 5px;">
+                    <svg class="chevron-right" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round" style="margin-right: 5px;">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                    <span>Completed Tasks</span>
+                    <span id="completedCount" style="margin-left: 8px; font-size: 0.9em; color: #888;"></span>
+                </button>
+            </div>
+            <ul id="completedTaskList" class="task-list" style="display: none;">
+            </ul>
+        </div>
+        <div id="status"></div>
+    </div>
+</div>
+<div id="habits-tab" class="tab-content">
+    <div class="habits-container">
+        <div class="habits-header">
+            <div class="streak-header">
+                <span class="trophy-icon">🏆</span>
+                <h2>Daily Habits & Streaks</h2>
+            </div>
+            <div class="sort-controls">
+                <select id="habitSort" class="habit-sort">
+                    <option value="streak">Sort by Streak</option>
+                    <option value="name">Sort by Name</option>
+                    <option value="bestStreak">Sort by Best Streak</option>
+                </select>
+                <button id="sortDirection" class="sort-direction" title="Toggle sort direction">
+                    ↓
+                </button>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="streakChart"></canvas>
+        </div>
+        <div id="habitsList" class="habits-list">
+            <!-- Habits will be populated here -->
+        </div>
+    </div>
+</div>
+<div id="kanban-tab" class="tab-content">
+    <div class="kanban-container">
+        <div class="kanban-column" data-section="todo">
+            <div class="kanban-column-header">Todo</div>
+            <div class="kanban-column-content"></div>
+        </div>
+        <div class="kanban-column" data-section="in progress">
+            <div class="kanban-column-header">In Progress</div>
+            <div class="kanban-column-content"></div>
+        </div>
+        <div class="kanban-column" data-section="done">
+            <div class="kanban-column-header">Done</div>
+            <div class="kanban-column-content"></div>
+        </div>
+    </div>
+</div>
+<div id="calendar-tab" class="tab-content">
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <button onclick="previousMonth()">&lt;</button>
+            <h2 id="currentMonthDisplay"></h2>
+            <button onclick="nextMonth()">&gt;</button>
+        </div>
+        <div class="calendar-grid">
+            <div class="calendar-weekdays">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+            </div>
+            <div id="calendarDays" class="calendar-days"></div>
+        </div>
+    </div>
+</div>
+<div id="journal-tab" class="tab-content">
+    <div class="journal-container">
+        <h2>Journal</h2>
+        <div id="journalList" class="journal-list">
+        </div>
+    </div>
+</div>
+
+<!-- Edit Dialog -->
+<div id="editDialog" class="dialog-overlay">
+    <div class="dialog">
+        <h3>Edit Task</h3>
+        <div class="form-group">
+            <label for="editTaskText">Title</label>
+            <input type="text" id="editTaskText" placeholder="Task title">
+        </div>
+
+        <div class="form-group">
+            <label for="editTaskContext">Context</label>
+            <input type="text" id="editTaskContext" placeholder="Enter context (e.g., home, work)">
+        </div>
+
+        <div class="form-group">
+            <label for="editTaskDueDate">Due Date</label>
+            <input type="datetime-local" id="editTaskDueDate">
+        </div>
+
+        <div class="form-group">
+            <label for="editTaskDescription">Description</label>
+            <textarea id="editTaskDescription" placeholder="Task description"></textarea>
+        </div>
+
+        <div class="comments-section">
+            <h4>Comments</h4>
+            <div class="comments-list" id="commentsList"></div>
+            <div class="comment-input">
+                <input type="text" id="newComment" placeholder="Add a comment">
+                <button onclick="addComment()">Add</button>
+            </div>
+        </div>
+
+        <div class="dialog-buttons">
+            <button class="complete" onclick="completeTaskFromDialog()" style="background-color: #4CAF50;">Complete
+                Task
+            </button>
+            <div>
+                <button class="cancel" onclick="closeEditDialog()">Cancel</button>
+                <button class="save" onclick="saveEditedTask()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="pageDropOverlay" class="page-drop-overlay">
+    <div class="page-drop-message">
+        Drop your OPML, CSV, or TXT file here
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+
+<script>
+    let db = null;
+    let habitChart = null;
+    const DB_NAME = 'TodoDB';
+    const STORE_NAME = 'todos';
+    const COMPLETED_STORE = 'completed';
+    const KANBAN_JOURNAL_STORE = 'kanbanJournal';
+    let currentEditingId = null;
+    let currentCalendarDate = new Date();
+    let draggedTask = null;
+    window.lastCheckDate = new Date().toISOString().split('T')[0];
+    let currentContexts = new Set();
+    let selectedSuggestionIndex = -1;
+
+
+    // Initialize database connection
+    initDB().catch(error => {
+        console.error('Database initialization failed:', error);
+        showStatus('Database initialization failed', true);
+    });
+
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 6); // Increment version for schema update
+
+            request.onerror = (event) => {
+                console.error('Database error:', event.target.error);
+                reject(event.target.error);
+            };
+
+            request.onsuccess = (event) => {
+                db = event.target.result;
+                console.log('Database opened successfully');
+                loadTasks();
+                loadJournal();
+                loadKanban();
+                loadCompletedTasks();
+                resolve(db);
+            };
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    const store = db.createObjectStore(STORE_NAME, {keyPath: 'id', autoIncrement: true});
+                    store.createIndex('position', 'position', {unique: false});
+                    store.createIndex('description', 'description', {unique: false});
+                    store.createIndex('dueDate', 'dueDate', {unique: false});
+                    store.createIndex('section', 'section', {unique: false});
+                    store.createIndex('context', 'context', {unique: false});
+                    store.createIndex('resetDaily', 'resetDaily', {unique: false});
+                    store.createIndex('lastReset', 'lastReset', {unique: false});
+                    store.createIndex('currentStreak', 'currentStreak', {unique: false}); // Add streak tracking
+                    store.createIndex('lastStreakUpdate', 'lastStreakUpdate', {unique: false});
+                } else if (event.oldVersion < 6) {
+                    const store = event.target.transaction.objectStore(STORE_NAME);
+                    if (!store.indexNames.contains('context')) {
+                        store.createIndex('context', 'context', {unique: false});
+                    }
+                    if (!store.indexNames.contains('currentStreak')) {
+                        store.createIndex('currentStreak', 'currentStreak', {unique: false});
+                    }
+                    if (!store.indexNames.contains('lastStreakUpdate')) {
+                        store.createIndex('lastStreakUpdate', 'lastStreakUpdate', {unique: false});
+                    }
+                }
+
+                if (!db.objectStoreNames.contains(COMPLETED_STORE)) {
+                    const completedStore = db.createObjectStore(COMPLETED_STORE, {keyPath: 'id', autoIncrement: true});
+                    completedStore.createIndex('completedAt', 'completedAt', {unique: false});
+                }
+
+                if (!db.objectStoreNames.contains(KANBAN_JOURNAL_STORE)) {
+                    const journalStore = db.createObjectStore(KANBAN_JOURNAL_STORE, {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                    journalStore.createIndex('timestamp', 'timestamp', {unique: false});
+                }
+            };
+        });
+    }
+
+    const idb = {
+        /**
+         * Execute a single database operation
+         * @param {IDBDatabase} db - The database instance
+         * @param {string} storeName - Name of the object store
+         * @param {string} mode - Transaction mode ('readonly' or 'readwrite')
+         * @param {function} operation - Function that takes an IDBObjectStore and returns an IDBRequest
+         * @returns {Promise} Resolves with the result of the operation
+         */
+        async execute(db, storeName, mode, operation) {
+            if (!db) throw new Error('Database not initialized');
+
+            const transaction = db.transaction(storeName, mode);
+            const store = transaction.objectStore(storeName);
+
+            return new Promise((resolve, reject) => {
+                const request = operation(store);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        },
+
+        /**
+         * Common database operations
+         */
+        operations: {
+            getAll: (store) => store.getAll(),
+            get: (store, key) => store.get(key),
+            add: (store, item) => store.add(item),
+            put: (store, item) => store.put(item),
+            delete: (store, key) => store.delete(key),
+            clear: (store) => store.clear(),
+            count: (store) => store.count(),
+        }
+    };
+
+    function showStatus(message, isError = false) {
+        const status = document.getElementById('status');
+        status.textContent = message;
+        status.style.color = isError ? '#ff4444' : '#666';
+        setTimeout(() => {
+            status.textContent = '';
+        }, 3000);
+    }
+
+    async function loadTasks() {
+        if (!db) {
+            console.error('Database not initialized');
+            return;
+        }
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                const tasks = request.result;
+                const contextFilter = document.getElementById('contextFilter');
+                const selectedContext = contextFilter.value;
+                const today = new Date().toISOString().split('T')[0];
+
+                // Filter tasks based on completion status and reset rules
+                const visibleTasks = tasks.filter(task => {
+                    // Daily reset tasks should only be hidden if lastReset matches today
+                    if (task.resetDaily) {
+                        const isCompletedToday = task.lastReset === today;
+                        return !isCompletedToday;
+                    }
+                    return true;
+                });
+
+                // Apply context filter if selected
+                const filteredTasks = selectedContext ?
+                    visibleTasks.filter(task => task.context === selectedContext) :
+                    visibleTasks;
+
+                // If there are no tasks in the current filter, reset to "All Contexts"
+                if (selectedContext && filteredTasks.length === 0) {
+                    contextFilter.value = '';
+                    document.getElementById('clearFilter').style.display = 'none';
+                    displayTasks(visibleTasks);
+                } else {
+                    displayTasks(filteredTasks);
+                }
+            };
+        } catch (error) {
+            console.error('Error in loadTasks:', error);
+            showStatus('Error loading tasks', true);
+        }
+    }
+
+    function displayTasks(tasks) {
+        const taskList = document.getElementById('taskList');
+        taskList.innerHTML = '';
+
+        tasks.sort((a, b) => a.position - b.position)
+            .forEach(task => {
+                const li = createTaskElement(task);
+                taskList.appendChild(li);
+            });
+
+        console.log('Tasks loaded:', tasks.length);
+    }
+
+    async function updateContextFilter() {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const tasks = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            const contextFilter = document.getElementById('contextFilter');
+            const selectedContext = contextFilter.value;
+
+            // Get unique contexts preserving case
+            const contexts = new Set(tasks
+                .map(task => task.context)
+                .filter(Boolean));
+
+            // Clear existing options except the first one (All Contexts)
+            while (contextFilter.options.length > 1) {
+                contextFilter.remove(1);
+            }
+
+            // Add context options
+            Array.from(contexts)
+                .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+                .forEach(context => {
+                    const option = new Option(context, context);
+                    contextFilter.add(option);
+                });
+
+            // Restore previous selection if it still exists
+            if (selectedContext && contexts.has(selectedContext)) {
+                contextFilter.value = selectedContext;
+            }
+
+            // Update clear filter button visibility
+            const clearFilter = document.getElementById('clearFilter');
+            if (clearFilter) {
+                clearFilter.style.display = contextFilter.value ? 'block' : 'none';
+            }
+        } catch (error) {
+            console.error('Error updating context filter:', error);
+        }
+    }
+
+    async function addTask() {
+        if (!db) {
+            console.error('Database not initialized');
+            showStatus('Database not ready', true);
+            return;
+        }
+
+        const input = document.getElementById('newTask');
+        const taskText = input.value.trim();
+
+        if (taskText === '') return;
+
+        const contextMatch = taskText.match(/@(\w+)/);
+        const resetDailyMatch = taskText.match(/\[daily\]/i);
+        const context = contextMatch ? contextMatch[1] : null;
+        const cleanText = taskText
+            .replace(/@\w+/, '')
+            .replace(/\[daily\]/i, '')
+            .trim();
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const countRequest = store.count();
+
+            countRequest.onsuccess = async () => {
+                const position = countRequest.result;
+                const task = {
+                    text: cleanText,
+                    description: '',
+                    context: context,
+                    comments: [],
+                    position: position,
+                    section: 'todo',
+                    created: new Date().toISOString(),
+                    resetDaily: !!resetDailyMatch,
+                    lastReset: null
+                };
+
+                const addRequest = store.add(task);
+
+                addRequest.onsuccess = async (event) => {
+                    task.id = event.target.result;
+                    const taskList = document.getElementById('taskList');
+                    const li = createTaskElement(task);
+                    taskList.appendChild(li);
+                    input.value = '';
+
+                    // Update both the context filter and autocomplete lists
+                    await updateContextsList();
+                    await updateContextFilter();
+
+                    loadKanban();
+                    showStatus('Task added successfully');
+                };
+            };
+        } catch (error) {
+            console.error('Error in addTask:', error);
+            showStatus('Error adding task', true);
+        }
+    }
+
+    function handleImport(event) {
+        const file = event.target.files[0];
+        if (file) {
+            importDatabase(file);
+        }
+        // Reset the input so the same file can be imported again if needed
+        event.target.value = '';
+    }
+
+    function setupAutoReset() {
+        // Check how long until next midnight
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+
+        // Calculate milliseconds until next midnight
+        const msUntilMidnight = tomorrow - now;
+
+        // Set initial timeout for next midnight
+        setTimeout(() => {
+            // Perform the reset
+            checkDailyResets();
+            loadTasks();
+            loadKanban();
+
+            // Set up recurring check every 24 hours
+            setInterval(() => {
+                checkDailyResets();
+                loadTasks();
+                loadKanban();
+            }, 24 * 60 * 60 * 1000);
+
+            // Also set up a check every minute to handle system sleep/hibernate cases
+            setInterval(() => {
+                const currentDate = new Date().toISOString().split('T')[0];
+                if (window.lastCheckDate && window.lastCheckDate !== currentDate) {
+                    checkDailyResets();
+                    loadTasks();
+                    loadKanban();
+                }
+                window.lastCheckDate = currentDate;
+            }, 60 * 1000);
+
+        }, msUntilMidnight);
+    }
+
+    function createTaskElement(task) {
+        const li = document.createElement('li');
+        li.className = 'task-item';
+        li.draggable = true;
+        li.dataset.id = task.id;
+        li.dataset.position = task.position;
+        li.dataset.section = task.section || 'todo';
+
+        // Checkbox first
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'task-checkbox';
+        checkbox.onclick = function () {
+            if (this.checked) {
+                deleteTask(task.id);
+            }
+        };
+        li.appendChild(checkbox);
+
+        // Content wrapper for everything else
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'task-content-wrapper';
+
+        // Header section with title and habit indicator
+        const taskHeader = document.createElement('div');
+        taskHeader.className = 'task-header';
+
+        // Task text
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = task.text;
+        taskHeader.appendChild(titleSpan);
+
+        // Daily habit indicator and streak if applicable
+        if (task.resetDaily) {
+            const habitIcon = document.createElement('div');
+            habitIcon.className = 'daily-habit-icon';
+            habitIcon.innerHTML = '<span>📅 Daily habit</span>';
+            habitIcon.title = 'This task resets daily at midnight';
+            taskHeader.appendChild(habitIcon);
+
+            // Add streak if applicable
+            if (task.currentStreak > 0 && task.lastStreakUpdate) {
+                const lastUpdate = new Date(task.lastStreakUpdate);
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+
+                const lastUpdateDate = lastUpdate.toISOString().split('T')[0];
+                const todayDate = today.toISOString().split('T')[0];
+                const yesterdayDate = yesterday.toISOString().split('T')[0];
+
+                if (lastUpdateDate === todayDate || lastUpdateDate === yesterdayDate) {
+                    const streakSpan = document.createElement('div');
+                    streakSpan.className = 'streak-count';
+                    streakSpan.title = `${task.currentStreak} day streak`;
+                    streakSpan.innerHTML = `${task.currentStreak}<span style="margin-left: 2px">🔥</span>`;
+                    taskHeader.appendChild(streakSpan);
+                }
+            }
+        }
+
+        contentWrapper.appendChild(taskHeader);
+
+        // Description if exists
+        const descSpan = document.createElement('div');
+        descSpan.className = 'task-description';
+        descSpan.textContent = task.description;
+        contentWrapper.appendChild(descSpan);
+
+        // Metadata container for due date and comments
+        const metadataContainer = document.createElement('div');
+        metadataContainer.className = 'task-metadata';
+
+
+        // Context badge if exists
+        if (task.context) {
+            const contextBadge = document.createElement('span');
+            contextBadge.className = 'context-badge';
+            contextBadge.textContent = `@${task.context.startsWith('@') ? task.context.substring(1) : task.context}`;
+            metadataContainer.appendChild(contextBadge);
+        }
+
+        // Due date if exists
+        if (task.dueDate) {
+            const dueDateSpan = document.createElement('span');
+            dueDateSpan.className = 'task-dueDate';
+            const date = new Date(task.dueDate);
+            const isOverdue = date < new Date();
+            dueDateSpan.style.color = isOverdue ? '#ff4444' : '#666';
+            dueDateSpan.innerHTML = `📅 ${date.toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })}`;
+            metadataContainer.appendChild(dueDateSpan);
+        }
+
+        // Comments count if exists
+        if (task.comments && task.comments.length > 0) {
+            const commentsSpan = document.createElement('span');
+            commentsSpan.className = 'task-comments-count';
+            commentsSpan.innerHTML = `💬 ${task.comments.length}`;
+            metadataContainer.appendChild(commentsSpan);
+        }
+
+        if (task.context || task.dueDate || (task.comments && task.comments.length > 0)) {
+            contentWrapper.appendChild(metadataContainer);
+        }
+
+        // Delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-button ml-2';
+        deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+        deleteButton.onclick = (e) => {
+            e.stopPropagation();
+            confirmDelete(task);
+        };
+
+        li.appendChild(contentWrapper);
+        li.appendChild(deleteButton);
+
+        // Add click handler for the whole task
+        contentWrapper.onclick = () => openEditDialog(task);
+
+        // Add drag and drop handlers
+        li.addEventListener('dragstart', handleDragStart);
+        li.addEventListener('dragend', handleDragEnd);
+        li.addEventListener('dragover', handleDragOver);
+        li.addEventListener('drop', handleDrop);
+
+        return li;
+    }
+
+    function openEditDialog(task) {
+        currentEditingId = task.id;
+        const dialog = document.getElementById('editDialog');
+        const taskText = document.getElementById('editTaskText');
+        const taskDesc = document.getElementById('editTaskDescription');
+        const taskContext = document.getElementById('editTaskContext');
+        const taskDueDate = document.getElementById('editTaskDueDate');
+        const commentsList = document.getElementById('commentsList');
+
+        // Clear any existing reset daily checkbox
+        const existingResetDaily = document.getElementById('resetDailyContainer');
+        if (existingResetDaily) {
+            existingResetDaily.remove();
+        }
+
+        taskText.value = task.text;
+        taskDesc.value = task.description || '';
+        taskContext.value = task.context || '';
+        if (task.dueDate) {
+            const date = new Date(task.dueDate);
+            const formattedDate = date.toISOString().slice(0, 16);
+            taskDueDate.value = formattedDate;
+        } else {
+            taskDueDate.value = '';
+        }
+
+        const resetDailyLabel = document.createElement('div');
+        resetDailyLabel.id = 'resetDailyContainer';
+        resetDailyLabel.className = 'form-group';
+        resetDailyLabel.style.cssText = 'display: flex; align-items: center; gap: 8px; margin: 10px 0;';
+        resetDailyLabel.innerHTML = `
+            <input type="checkbox"
+                   id="editTaskResetDaily"
+                   style="margin: 0; width: auto;"
+                   ${task.resetDaily ? 'checked' : ''}>
+            <label for="editTaskResetDaily" class="daily-habit-label">
+                <span>📅</span> Make this a daily habit
+            </label>
+        `;
+
+        // Insert after the first form-group
+        const firstFormGroup = dialog.querySelector('.form-group');
+        firstFormGroup.after(resetDailyLabel);
+
+        // Load comments
+        commentsList.innerHTML = '';
+        if (task.comments && task.comments.length > 0) {
+            task.comments.forEach(comment => {
+                const commentDiv = document.createElement('div');
+                commentDiv.className = 'comment-item';
+                commentDiv.innerHTML = `
+                <div class="comment-text">${comment.text}</div>
+                <div class="comment-date">${new Date(comment.date).toLocaleString()}</div>
+            `;
+                commentsList.appendChild(commentDiv);
+            });
+        }
+
+        dialog.style.display = 'flex';
+        document.getElementById('newComment').value = '';
+    }
+
+    function closeEditDialog() {
+        const dialog = document.getElementById('editDialog');
+        dialog.style.display = 'none';
+        currentEditingId = null;
+    }
+
+    async function addComment() {
+        if (!db || !currentEditingId) return;
+
+        const commentInput = document.getElementById('newComment');
+        const commentText = commentInput.value.trim();
+
+        if (commentText === '') return;
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(currentEditingId);
+
+            request.onsuccess = () => {
+                const task = request.result;
+                if (!task.comments) task.comments = [];
+
+                const newComment = {
+                    text: commentText,
+                    date: new Date().toISOString()
+                };
+
+                task.comments.push(newComment);
+
+                store.put(task).onsuccess = () => {
+                    // Add comment to UI
+                    const commentsList = document.getElementById('commentsList');
+                    const commentDiv = document.createElement('div');
+                    commentDiv.className = 'comment-item';
+                    commentDiv.innerHTML = `
+                        <div class="comment-text">${newComment.text}</div>
+                        <div class="comment-date">${new Date(newComment.date).toLocaleString()}</div>
+                    `;
+                    commentsList.appendChild(commentDiv);
+
+                    // Clear input
+                    commentInput.value = '';
+                    showStatus('Comment added successfully');
+                };
+            };
+        } catch (error) {
+            console.error('Error adding comment:', error);
+            showStatus('Error adding comment', true);
+        }
+    }
+
+    async function saveEditedTask() {
+        if (!db || !currentEditingId) return;
+
+        const taskText = document.getElementById('editTaskText').value.trim();
+        const taskDesc = document.getElementById('editTaskDescription').value.trim();
+        const taskDueDate = document.getElementById('editTaskDueDate').value;
+        const taskContext = document.getElementById('editTaskContext').value.trim();
+        const resetDaily = document.getElementById('editTaskResetDaily').checked;
+
+        if (taskText === '') return;
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(currentEditingId);
+
+            request.onsuccess = () => {
+                const task = request.result;
+                task.text = taskText;
+                task.description = taskDesc;
+                task.context = taskContext || null;
+                task.dueDate = taskDueDate ? new Date(taskDueDate).toISOString() : null;
+
+                // If task is newly marked as daily reset, initialize lastReset as null
+                if (resetDaily && !task.resetDaily) {
+                    task.lastReset = null;
+                }
+                task.resetDaily = resetDaily;
+
+                // If daily reset is being disabled, remove lastReset
+                if (!resetDaily) {
+                    task.lastReset = null;
+                }
+
+                store.put(task).onsuccess = () => {
+                    loadTasks();
+                    loadKanban();
+                    updateCalendar();
+                    closeEditDialog();
+                    showStatus('Task updated successfully');
+                };
+            };
+        } catch (error) {
+            console.error('Error saving edited task:', error);
+            showStatus('Error updating task', true);
+        }
+    }
+
+    async function deleteTask(id) {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction([STORE_NAME, COMPLETED_STORE], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const completedStore = transaction.objectStore(COMPLETED_STORE);
+
+            const getRequest = store.get(id);
+
+            getRequest.onsuccess = async () => {
+                const task = getRequest.result;
+                if (task) {
+                    const today = new Date().toISOString().split('T')[0];
+
+                    const {id: originalId, ...taskWithoutId} = task;
+                    const completedTask = {
+                        ...taskWithoutId,
+                        completedAt: new Date().toISOString()
+                    };
+
+                    // Inside your deleteTask function where you handle streaks
+                    if (task.resetDaily) {
+                        // Initialize streak fields if they don't exist
+                        const updatedTask = {
+                            ...task,
+                            currentStreak: task.currentStreak || 0,
+                            bestStreak: task.bestStreak || 0, // Keep existing bestStreak
+                            lastStreakUpdate: task.lastStreakUpdate || null
+                        };
+
+                        const lastUpdate = updatedTask.lastStreakUpdate;
+                        const today = new Date().toISOString().split('T')[0];
+                        const yesterday = new Date();
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+                        // Update current streak
+                        if (!lastUpdate) {
+                            // First completion ever
+                            updatedTask.currentStreak = 1;
+                        } else if (lastUpdate === yesterdayStr) {
+                            // Completed on consecutive days
+                            updatedTask.currentStreak++;
+                        } else if (lastUpdate === today) {
+                            // Already completed today, keep current streak
+                        } else {
+                            // More than a day has passed, start new streak
+                            updatedTask.currentStreak = 1;
+                        }
+
+                        // Only update best streak if current streak exceeds it
+                        if (updatedTask.currentStreak > (updatedTask.bestStreak || 0)) {
+                            updatedTask.bestStreak = updatedTask.currentStreak;
+                        }
+
+                        updatedTask.lastStreakUpdate = today;
+                        updatedTask.lastReset = today;
+
+                        // Save completed instance
+                        await idb.execute(db, COMPLETED_STORE, 'readwrite',
+                            store => idb.operations.add(store, completedTask));
+
+                        // Update original task with new streak info
+                        await idb.execute(db, STORE_NAME, 'readwrite',
+                            store => idb.operations.put(store, updatedTask));
+                    } else {
+                        // Handle non-daily tasks as before
+                        await idb.execute(db, COMPLETED_STORE, 'readwrite',
+                            store => idb.operations.add(store, completedTask));
+                        await idb.execute(db, STORE_NAME, 'readwrite',
+                            store => idb.operations.delete(store, id));
+                    }
+
+                    await checkAndUpdateContextFilter();
+                    loadTasks();
+                    loadKanban();
+                    updateCalendar();
+                    loadJournal();
+                    loadCompletedTasks();
+                    showStatus('Task completed successfully');
+                }
+            };
+        } catch (error) {
+            console.error('Error completing task:', error);
+            showStatus('Error completing task', true);
+        }
+    }
+
+    async function checkDailyResets() {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                const tasks = request.result;
+                const today = new Date().toISOString().split('T')[0];
+                let updatesNeeded = false;
+
+                tasks.forEach(task => {
+                    if (task.resetDaily) {
+                        const updatedTask = {...task};
+
+                        if (task.lastReset) {
+                            const lastResetDate = new Date(task.lastReset);
+                            const todayDate = new Date(today);
+                            const daysDiff = Math.floor((todayDate - lastResetDate) / (1000 * 60 * 60 * 24));
+
+                            if (daysDiff >= 1) {
+                                // Only reset the lastReset to make task visible again
+                                // Don't reset the streak - it will be handled when the task is completed
+                                updatedTask.lastReset = null;
+                                store.put(updatedTask);
+                                updatesNeeded = true;
+
+                                logStreakCalculation(updatedTask, 'reset visibility at midnight', {
+                                    daysDiff,
+                                    lastResetDate: task.lastReset,
+                                    currentStreak: updatedTask.currentStreak
+                                });
+                            }
+                        }
+                    }
+                });
+
+                if (updatesNeeded) {
+                    loadTasks();
+                    loadKanban();
+                }
+            };
+        } catch (error) {
+            console.error('Error checking daily resets:', error);
+        }
+    }
+
+    async function checkAndUpdateContextFilter() {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const tasks = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            const contextFilter = document.getElementById('contextFilter');
+            const selectedContext = contextFilter.value;
+
+            if (selectedContext) {
+                // Check if there are any remaining tasks with the selected context
+                const tasksInContext = tasks.filter(task => task.context === selectedContext);
+
+                if (tasksInContext.length === 0) {
+                    // Reset to "All Contexts" if no tasks remain in the current context
+                    contextFilter.value = '';
+                    document.getElementById('clearFilter').style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Error checking context filter:', error);
+        }
+    }
+
+    async function updatePositions() {
+        if (!db) return;
+
+        try {
+            const taskList = document.getElementById('taskList');
+            const items = Array.from(taskList.children);
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+
+            for (let index = 0; index < items.length; index++) {
+                const item = items[index];
+                const id = parseInt(item.dataset.id);
+                const request = store.get(id);
+
+                request.onsuccess = () => {
+                    const task = request.result;
+                    if (task) {
+                        task.position = index;
+                        store.put(task);
+                    }
+                };
+            }
+
+            transaction.oncomplete = () => {
+                console.log('Positions updated successfully');
+                showStatus('Order updated');
+            };
+        } catch (error) {
+            console.error('Error updating positions:', error);
+            showStatus('Error updating order', true);
+        }
+    }
+
+    let draggedItem = null;
+
+    function handleDragStart(e) {
+        draggedItem = this;
+        this.classList.add('dragging');
+    }
+
+    function handleDragEnd(e) {
+        this.classList.remove('dragging');
+        updatePositions();
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        if (this === draggedItem) return;
+
+        let taskList = document.getElementById('taskList');
+        let children = Array.from(taskList.children);
+        let draggedIndex = children.indexOf(draggedItem);
+        let droppedIndex = children.indexOf(this);
+
+        if (draggedIndex < droppedIndex) {
+            this.parentNode.insertBefore(draggedItem, this.nextSibling);
+        } else {
+            this.parentNode.insertBefore(draggedItem, this);
+        }
+    }
+
+    function parseTextToTasks(textContent) {
+        const lines = textContent.split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+
+        let currentSection = 'todo';
+        const tasks = [];
+
+        lines.forEach((line, index) => {
+            // Check if line is a section marker
+            if (line.toLowerCase().startsWith('section:')) {
+                currentSection = line.substring(8).trim().toLowerCase();
+                return;
+            }
+
+            // Check for optional due date in parentheses at the end
+            const dueDateMatch = line.match(/(.*?)\s*\(([^)]+)\)\s*$/);
+            let taskText = line;
+            let dueDate = null;
+
+            if (dueDateMatch) {
+                taskText = dueDateMatch[1].trim();
+                const parsedDate = parseRelativeDate(dueDateMatch[2].trim());
+                if (parsedDate) {
+                    dueDate = parsedDate.toISOString();
+                }
+            }
+
+            // First check for title/description split using ": "
+            const titleDescSplit = taskText.split(': ', 2);
+            let title, description;
+
+            if (titleDescSplit.length === 2) {
+                title = titleDescSplit[0].trim();
+                description = titleDescSplit[1].trim();
+            } else {
+                // If no ": " found, check for "--" separator as fallback
+                const parts = taskText.split('--').map(part => part.trim());
+                title = parts[0];
+                description = parts[1] || '';
+            }
+
+            tasks.push({
+                text: title,
+                description: description,
+                dueDate: dueDate,
+                comments: [],
+                section: currentSection,
+                created: new Date().toISOString()
+            });
+        });
+
+        return tasks;
+    }
+
+    function parseOPMLToTasks(opmlText) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(opmlText, "text/xml");
+        const tasks = [];
+
+        // Helper function to convert text to camelCase context name
+        function formatContextName(text) {
+            return text
+                .trim()
+                // Split on spaces and any special characters
+                .split(/[\s\-_,\.]+/)
+                // Convert to camelCase
+                .map((word, index) => {
+                    // Convert to lowercase first
+                    word = word.toLowerCase();
+                    // Capitalize first letter except for first word
+                    return index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1);
+                })
+                // Join without spaces
+                .join('');
+        }
+
+        // Function to recursively process outline elements
+        function processOutlines(elements, parentPath = [], section = 'todo', context = null) {
+            Array.from(elements).forEach(outline => {
+                const text = outline.getAttribute("text") || "";
+                const children = outline.getElementsByTagName("outline");
+
+                // Check if this is a section marker
+                const isSection = outline.getAttribute("isSection") === "true" ||
+                    text.toLowerCase().includes('section:');
+
+                // Check if this could be a context node (parent with text <= 25 chars)
+                const possibleContext = text.trim().length <= 35 ? formatContextName(text) : null;
+
+                if (isSection) {
+                    // Update section for child elements
+                    const newSection = text.toLowerCase().replace('section:', '').trim();
+                    if (children.length > 0) {
+                        processOutlines(children, parentPath, newSection, context);
+                    }
+                } else if (children.length === 0 && text.trim()) {
+                    // Split text into title and description if it contains ': '
+                    const titleDescSplit = text.split(': ', 2);
+                    let title, description;
+
+                    if (titleDescSplit.length === 2) {
+                        title = titleDescSplit[0].trim();
+                        description = titleDescSplit[1].trim();
+                    } else {
+                        title = text.trim();
+                        description = '';
+                    }
+
+                    // Create task object with current section and context
+                    const task = {
+                        text: title,
+                        description: description,
+                        comments: [],
+                        section: section,
+                        context: context, // Use the inherited context
+                        created: new Date().toISOString()
+                    };
+                    tasks.push(task);
+                } else if (children.length > 0) {
+                    // Continue traversing with updated context if this node could be a context
+                    const newContext = possibleContext || context;
+                    processOutlines(children, [...parentPath, text.trim()], section, newContext);
+                }
+            });
+        }
+
+        const outlines = xmlDoc.getElementsByTagName("outline");
+        processOutlines(outlines);
+        return tasks;
+    }
+
+    function createTaskKey(task) {
+        return `${task.text.trim().toLowerCase()}|${(task.description || '').trim().toLowerCase()}`;
+    }
+
+    function parseOrgToTasks(orgContent) {
+        const lines = orgContent.split(/\r?\n/);
+        const tasks = [];
+        let currentTask = null;
+        let currentDescription = [];
+        let currentHeadingLevel = 0;
+        let contextFromParent = null;
+
+        // Helper function to process description lines
+        function finalizeDescription() {
+            if (currentTask && currentDescription.length > 0) {
+                currentTask.description = currentDescription.join('\n').trim();
+                currentDescription = [];
+            }
+        }
+
+        // Process org-mode schedule and deadline timestamps
+        function parseOrgTimestamp(line) {
+            const timestampRegex = /<(\d{4}-\d{2}-\d{2})(?:\s+\w+\s+\d{1,2}:\d{2})?>/;
+            const match = line.match(timestampRegex);
+            return match ? new Date(match[1]).toISOString() : null;
+        }
+
+        // Helper to determine if a line is a TODO item
+        function isTodoLine(line) {
+            return /^\*+\s+(TODO|DONE|IN-PROGRESS|WAITING|CANCELLED)\s+/.test(line);
+        }
+
+        lines.forEach((line) => {
+            const trimmedLine = line.trim();
+
+            // Check for heading/todo
+            if (line.startsWith('*')) {
+                // Finalize previous task's description if any
+                finalizeDescription();
+
+                const headingMatch = line.match(/^(\*+)\s+(?:(TODO|DONE|IN-PROGRESS|WAITING|CANCELLED)\s+)?(.+)$/);
+                if (headingMatch) {
+                    const [, stars, status, content] = headingMatch;
+                    const level = stars.length;
+
+                    // Update heading level and context tracking
+                    if (level <= currentHeadingLevel) {
+                        contextFromParent = null;
+                    }
+                    currentHeadingLevel = level;
+
+                    // If this is a short heading (potential context), store it for child tasks
+                    if (content.length <= 35 && !status) {
+                        contextFromParent = content.trim()
+                            .toLowerCase()
+                            .replace(/[^a-z0-9]/g, '');
+                    }
+
+                    // Only create task if it has a status
+                    if (status) {
+                        const tagsMatch = content.match(/:\w+:$/);
+                        const contentWithoutTags = tagsMatch ?
+                            content.slice(0, tagsMatch.index).trim() :
+                            content.trim();
+
+                        currentTask = {
+                            text: contentWithoutTags,
+                            description: '',
+                            comments: [],
+                            context: contextFromParent,
+                            section: status.toLowerCase() === 'done' ? 'done' :
+                                status.toLowerCase() === 'in-progress' ? 'in progress' :
+                                    'todo',
+                            created: new Date().toISOString()
+                        };
+                        tasks.push(currentTask);
+                    }
+                }
+            }
+            // Handle scheduled/deadline dates
+            else if (currentTask && (trimmedLine.startsWith('SCHEDULED:') || trimmedLine.startsWith('DEADLINE:'))) {
+                const dueDate = parseOrgTimestamp(trimmedLine);
+                if (dueDate) {
+                    currentTask.dueDate = dueDate;
+                }
+            }
+            // Handle properties
+            else if (currentTask && trimmedLine.startsWith(':PROPERTIES:')) {
+                // Skip property drawer
+                return;
+            }
+            // Handle comments/notes
+            else if (currentTask && trimmedLine.startsWith('COMMENT')) {
+                const commentText = trimmedLine.substring(7).trim();
+                if (commentText) {
+                    currentTask.comments.push({
+                        text: commentText,
+                        date: new Date().toISOString()
+                    });
+                }
+            }
+            // Add to description if we're in a task
+            else if (currentTask && trimmedLine && !trimmedLine.startsWith(':END:')) {
+                currentDescription.push(line.trimLeft());
+            }
+        });
+
+        // Handle description of last task if any
+        finalizeDescription();
+
+        return tasks;
+    }
+
+    async function importTasks(tasks) {
+        if (!db) return;
+
+        try {
+            // De-duplicate tasks before importing
+            const uniqueTasksMap = new Map();
+            tasks.forEach(task => {
+                const key = createTaskKey(task);
+                // Keep the first occurrence of each task
+                if (!uniqueTasksMap.has(key)) {
+                    uniqueTasksMap.set(key, task);
+                }
+            });
+            const uniqueTasks = Array.from(uniqueTasksMap.values());
+
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+
+            // Get current highest position
+            const countRequest = store.count();
+
+            countRequest.onsuccess = async () => {
+                const startPosition = countRequest.result;
+
+                // Add each unique task
+                for (let i = 0; i < uniqueTasks.length; i++) {
+                    const task = uniqueTasks[i];
+                    task.position = startPosition + i;
+
+                    await new Promise((resolve, reject) => {
+                        const request = store.add(task);
+                        request.onsuccess = resolve;
+                        request.onerror = reject;
+                    });
+                }
+
+                // Update all views
+                loadTasks();        // Update task list
+                loadKanban();       // Update kanban board
+                updateCalendar();   // Update calendar if tasks have due dates
+
+                const skippedCount = tasks.length - uniqueTasks.length;
+                const message = `Imported ${uniqueTasks.length} tasks` +
+                    (skippedCount > 0 ? ` (${skippedCount} duplicates skipped)` : '');
+                showStatus(message);
+            };
+        } catch (error) {
+            console.error('Error importing tasks:', error);
+            showStatus('Error importing tasks', true);
+        }
+    }
+
+    function parseRelativeDate(dateStr) {
+        if (!dateStr) return null;
+
+        // Handle ISO format dates directly
+        if (dateStr.includes('T') || dateStr.includes('-')) {
+            return new Date(dateStr);
+        }
+
+        // Parse relative dates
+        const match = dateStr.toLowerCase().match(/in (\d+) (day|days|week|weeks|month|months|year|years)/);
+        if (!match) return null;
+
+        const amount = parseInt(match[1]);
+        const unit = match[2];
+
+        const now = new Date();
+        switch (unit) {
+            case 'day':
+            case 'days':
+                return new Date(now.setDate(now.getDate() + amount));
+            case 'week':
+            case 'weeks':
+                return new Date(now.setDate(now.getDate() + (amount * 7)));
+            case 'month':
+            case 'months':
+                return new Date(now.setMonth(now.getMonth() + amount));
+            case 'year':
+            case 'years':
+                return new Date(now.setFullYear(now.getFullYear() + amount));
+            default:
+                return null;
+        }
+    }
+
+    function parseCSVToTasks(csvText) {
+        return new Promise((resolve, reject) => {
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                transformHeader: header => header.trim().toUpperCase(),
+                complete: function (results) {
+                    if (results.errors.length > 0) {
+                        reject(new Error('CSV parsing error: ' + results.errors[0].message));
+                        return;
+                    }
+
+                    // Validate required CONTENT column
+                    if (!results.meta.fields.includes('CONTENT')) {
+                        reject(new Error('CSV must contain a CONTENT column'));
+                        return;
+                    }
+
+                    let currentTask = null;
+                    let currentSection = 'todo'; // Default section
+                    const tasks = [];
+
+                    // Process each row sequentially
+                    results.data.forEach((row) => {
+                        // Skip rows without content
+                        if (!row.CONTENT?.trim()) return;
+
+                        const type = row.TYPE?.trim().toLowerCase() || 'task';
+
+                        if (type === 'section') {
+                            // Update current section
+                            currentSection = row.CONTENT.trim().toLowerCase();
+                        } else if (type === 'task') {
+                            // Create new task with current section
+                            currentTask = {
+                                text: row.CONTENT.trim(),
+                                description: row.DESCRIPTION?.trim() || '',
+                                comments: [],
+                                section: currentSection, // Apply current section
+                                created: new Date().toISOString()
+                            };
+
+                            // Handle due date if present
+                            if (row.DATE) {
+                                const dueDate = parseRelativeDate(row.DATE);
+                                if (dueDate) {
+                                    currentTask.dueDate = dueDate.toISOString();
+                                }
+                            }
+
+                            tasks.push(currentTask);
+                        } else if (type === 'note' && currentTask) {
+                            // Add note as a comment to the current task
+                            const commentDate = row.DATE ?
+                                parseRelativeDate(row.DATE)?.toISOString() :
+                                new Date().toISOString();
+
+                            currentTask.comments.push({
+                                text: row.CONTENT.trim(),
+                                date: commentDate
+                            });
+                        }
+                    });
+
+                    resolve(tasks);
+                },
+                error: function (error) {
+                    reject(new Error('CSV parsing error: ' + error.message));
+                }
+            });
+        });
+    }
+
+    function setupDropZone() {
+        const pageOverlay = document.getElementById('pageDropOverlay');
+
+        // Function to handle file processing
+        function processFile(file) {
+            if (!file) {
+                showStatus('Please drop a valid file', true);
+                return;
+            }
+
+            const fileExt = file.name.toLowerCase().split('.').pop();
+            if (!['opml', 'csv', 'txt', 'org'].includes(fileExt)) {
+                showStatus('Please drop an OPML, CSV, TXT, or ORG file', true);
+                return;
+            }
+
+            return file.text().then(text => {
+                let tasks;
+                switch (fileExt) {
+                    case 'org':
+                        tasks = parseOrgToTasks(text);
+                        break;
+                    case 'opml':
+                        tasks = parseOPMLToTasks(text);
+                        break;
+                    case 'csv':
+                        tasks = parseCSVToTasks(text);
+                        break;
+                    case 'txt':
+                        tasks = parseTextToTasks(text);
+                        break;
+                }
+                return importTasks(tasks);
+            }).catch(error => {
+                console.error(`Error processing ${fileExt.toUpperCase()} file:`, error);
+                showStatus(`Error processing ${fileExt.toUpperCase()} file: ${error.message}`, true);
+            });
+        }
+
+        // Function to handle plain text content
+        async function processPlainText(text) {
+            try {
+                const tasks = parseTextToTasks(text);
+                await importTasks(tasks);
+            } catch (error) {
+                console.error('Error processing dropped text:', error);
+                showStatus('Error processing dropped text: ' + error.message, true);
+            }
+        }
+
+        // Page-wide drag and drop handlers
+        document.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            // Show overlay for both files and text
+            if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('text/plain')) {
+                pageOverlay.classList.add('visible');
+                // Update message based on drag type
+                const message = pageOverlay.querySelector('.page-drop-message');
+                message.textContent = e.dataTransfer.types.includes('Files')
+                    ? 'Drop your OPML, CSV, TXT, or ORG file here'
+                    : 'Drop text here to create tasks';
+            }
+        });
+
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            // Keep overlay visible for valid content types
+            if (!e.dataTransfer.types.includes('Files') && !e.dataTransfer.types.includes('text/plain')) {
+                pageOverlay.classList.remove('visible');
+            }
+        });
+
+        document.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            // Only hide overlay if leaving the document
+            if (!e.relatedTarget || e.relatedTarget.nodeName === 'HTML') {
+                pageOverlay.classList.remove('visible');
+            }
+        });
+
+        document.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            pageOverlay.classList.remove('visible');
+
+            try {
+                if (e.dataTransfer.types.includes('Files')) {
+                    // Handle file drop
+                    const file = e.dataTransfer.files[0];
+                    await processFile(file);
+                } else if (e.dataTransfer.types.includes('text/plain')) {
+                    // Handle text drop
+                    const text = await e.dataTransfer.getData('text/plain');
+                    if (text.trim()) {
+                        await processPlainText(text);
+                    }
+                }
+            } catch (error) {
+                console.error('Error processing dropped content:', error);
+                showStatus('Error processing dropped content', true);
+            }
+        });
+    }
+
+    async function loadJournal() {
+        if (!db) return;
+
+        try {
+            // Get completed tasks
+            const completedTransaction = db.transaction(COMPLETED_STORE, 'readonly');
+            const completedStore = completedTransaction.objectStore(COMPLETED_STORE);
+            const completedTasks = await new Promise((resolve, reject) => {
+                const request = completedStore.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            // Get Kanban movements
+            const kanbanTransaction = db.transaction('kanbanJournal', 'readonly');
+            const kanbanStore = kanbanTransaction.objectStore('kanbanJournal');
+            const kanbanMoves = await new Promise((resolve, reject) => {
+                const request = kanbanStore.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            // Combine and sort all entries
+            const allEntries = [
+                ...completedTasks.map(task => ({
+                    type: 'completion',
+                    timestamp: task.completedAt,
+                    task,
+                    id: task.id,
+                    storeType: COMPLETED_STORE
+                })),
+                ...kanbanMoves.map(move => ({
+                    type: 'kanban_move',
+                    timestamp: move.timestamp,
+                    ...move,
+                    id: move.id,
+                    storeType: KANBAN_JOURNAL_STORE
+                }))
+            ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            // Group by day
+            const groupedEntries = groupEntriesByDay(allEntries);
+
+            // Update UI
+            const journalList = document.getElementById('journalList');
+            journalList.innerHTML = '';
+
+            for (const [day, entries] of Object.entries(groupedEntries)) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'journal-day';
+
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'journal-day-header';
+                dayHeader.textContent = formatDay(day);
+                dayDiv.appendChild(dayHeader);
+
+                entries.forEach(entry => {
+                    const entryDiv = entry.type === 'completion' ?
+                        createJournalItem(entry.task) :
+                        createKanbanJournalItem(entry);
+                    entryDiv.dataset.id = entry.id;
+                    entryDiv.dataset.storeType = entry.storeType;
+                    dayDiv.appendChild(entryDiv);
+                });
+
+                journalList.appendChild(dayDiv);
+            }
+        } catch (error) {
+            console.error('Error loading journal:', error);
+            showStatus('Error loading journal', true);
+        }
+    }
+
+    function groupTasksByDay(tasks) {
+        const groups = {};
+        tasks.forEach(task => {
+            const day = task.completedAt.split('T')[0];
+            if (!groups[day]) {
+                groups[day] = [];
+            }
+            groups[day].push(task);
+        });
+        return groups;
+    }
+
+    function formatDay(dateStr) {
+        const date = new Date(dateStr);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (dateStr === today.toISOString().split('T')[0]) {
+            return 'Today';
+        } else if (dateStr === yesterday.toISOString().split('T')[0]) {
+            return 'Yesterday';
+        } else {
+            return date.toLocaleDateString(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+    }
+
+    function createJournalItem(task) {
+        const div = document.createElement('div');
+        div.className = 'journal-item';
+        div.dataset.id = task.id;
+        div.dataset.storeType = 'completed';
+
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'journal-time';
+        timeDiv.textContent = new Date(task.completedAt).toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'journal-content';
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'journal-title';
+        titleDiv.textContent = task.text;
+        contentDiv.appendChild(titleDiv);
+
+        if (task.description) {
+            const descDiv = document.createElement('div');
+            descDiv.className = 'journal-description';
+            descDiv.textContent = task.description;
+            contentDiv.appendChild(descDiv);
+        }
+
+        // Create and append delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-button';
+        deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+        deleteButton.onclick = () => confirmDeleteJournalEntry(task.id, 'completed');
+        div.appendChild(deleteButton);
+
+        div.appendChild(timeDiv);
+        div.appendChild(contentDiv);
+
+        return div;
+    }
+
+    async function confirmDelete(task) {
+        const confirmed = await showDeleteConfirmation(task.text);
+        if (confirmed) {
+            await permanentlyDeleteTask(task.id);
+        }
+    }
+
+    function showDeleteConfirmation(taskText) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'delete-confirmation-overlay';
+
+            const dialog = document.createElement('div');
+            dialog.className = 'delete-confirmation';
+            dialog.innerHTML = `
+            <h3 style="margin-top: 0;">Delete Task</h3>
+            <p>Are you sure you want to delete "${taskText}"?</p>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="cancel-delete" style="background: #666;">Cancel</button>
+                <button class="confirm-delete" style="background: #ff4444;">Delete</button>
+            </div>
+        `;
+
+            // Add event listeners after creating the elements
+            const cancelButton = dialog.querySelector('.cancel-delete');
+            const confirmButton = dialog.querySelector('.confirm-delete');
+
+            cancelButton.addEventListener('click', () => {
+                overlay.remove();
+                resolve(false);
+            });
+
+            confirmButton.addEventListener('click', () => {
+                overlay.remove();
+                resolve(true);
+            });
+
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+        });
+    }
+
+    async function permanentlyDeleteTask(id) {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+
+            await new Promise((resolve, reject) => {
+                const request = store.delete(id);
+                request.onsuccess = resolve;
+                request.onerror = reject;
+            });
+
+            // Update all views
+            loadTasks();     // Update task list
+            loadKanban();    // Update kanban board
+            updateCalendar(); // Update calendar if tasks have due dates
+
+            showStatus('Task deleted successfully');
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            showStatus('Error deleting task', true);
+        }
+    }
+
+    function setupTabs() {
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+
+                tab.classList.add('active');
+                const tabId = `${tab.dataset.tab}-tab`;
+                document.getElementById(tabId).classList.add('active');
+
+                // Load content based on tab
+                if (tab.dataset.tab === 'calendar') {
+                    updateCalendar();
+                } else if (tab.dataset.tab === 'habits') {
+                    loadHabits();
+                }
+            });
+        });
+    }
+
+
+    function updateCalendar() {
+        if (!db) return;
+
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth();
+
+        // Update header
+        document.getElementById('currentMonthDisplay').textContent =
+            new Date(year, month).toLocaleDateString('default', {month: 'long', year: 'numeric'});
+
+        // Calculate calendar days
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startingDay = firstDay.getDay();
+        const totalDays = lastDay.getDate();
+
+        // Get tasks for the visible date range
+        const startDate = new Date(year, month, 1 - startingDay);
+        const endDate = new Date(year, month + 1, 42 - startingDay);
+
+        const transaction = db.transaction(STORE_NAME, 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+            const tasks = request.result;
+            renderCalendarDays(startingDay, totalDays, tasks);
+        };
+    }
+
+    function renderCalendarDays(startingDay, totalDays, tasks) {
+        const calendarDays = document.getElementById('calendarDays');
+        calendarDays.innerHTML = '';
+
+        const today = new Date();
+        const currentMonth = currentCalendarDate.getMonth();
+        const currentYear = currentCalendarDate.getFullYear();
+
+        // Previous month days
+        const prevMonth = new Date(currentYear, currentMonth, 0);
+        const prevMonthDays = prevMonth.getDate();
+
+        for (let i = startingDay - 1; i >= 0; i--) {
+            const dayDiv = createCalendarDay(
+                prevMonthDays - i,
+                new Date(currentYear, currentMonth - 1, prevMonthDays - i),
+                tasks,
+                true
+            );
+            calendarDays.appendChild(dayDiv);
+        }
+
+        // Current month days
+        for (let i = 1; i <= totalDays; i++) {
+            const dayDiv = createCalendarDay(
+                i,
+                new Date(currentYear, currentMonth, i),
+                tasks,
+                false
+            );
+            calendarDays.appendChild(dayDiv);
+        }
+
+        // Next month days
+        const remainingDays = 42 - (startingDay + totalDays);
+        for (let i = 1; i <= remainingDays; i++) {
+            const dayDiv = createCalendarDay(
+                i,
+                new Date(currentYear, currentMonth + 1, i),
+                tasks,
+                true
+            );
+            calendarDays.appendChild(dayDiv);
+        }
+    }
+
+    function createCalendarDay(dayNumber, date, tasks, isDifferentMonth) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-day';
+
+        if (isDifferentMonth) {
+            dayDiv.classList.add('different-month');
+        }
+
+        // Create day header container
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'day-header';
+
+        // Add weekday label (visible only in mobile view)
+        const weekdayLabel = document.createElement('div');
+        weekdayLabel.className = 'weekday-label';
+        weekdayLabel.textContent = date.toLocaleDateString('default', {weekday: 'short'});
+        dayHeader.appendChild(weekdayLabel);
+
+        // Add day number
+        const dayNumberDiv = document.createElement('div');
+        dayNumberDiv.textContent = dayNumber;
+        dayHeader.appendChild(dayNumberDiv);
+
+        dayDiv.appendChild(dayHeader);
+
+        // Check if it's today
+        const today = new Date();
+        if (date.toDateString() === today.toDateString()) {
+            dayDiv.classList.add('today');
+        }
+
+        // Find tasks for this day
+        const dayTasks = tasks.filter(task => {
+            if (!task.dueDate) return false;
+            const taskDate = new Date(task.dueDate);
+            return taskDate.toDateString() === date.toDateString();
+        });
+
+        if (dayTasks.length > 0) {
+            dayDiv.classList.add('has-tasks');
+
+            // Add task previews
+            const tasksDiv = document.createElement('div');
+            tasksDiv.className = 'calendar-day-tasks';
+
+            // Show all tasks in mobile view, limit to 3 in desktop
+            const tasksToShow = window.innerWidth <= 768 ? dayTasks : dayTasks.slice(0, 2);
+
+            tasksToShow.forEach(task => {
+                const taskDiv = document.createElement('div');
+                taskDiv.textContent = task.text;
+                tasksDiv.appendChild(taskDiv);
+            });
+
+            // Show "more" indicator only in desktop view
+            if (window.innerWidth > 768 && dayTasks.length > 2) {
+                const moreDiv = document.createElement('div');
+                moreDiv.textContent = `+${dayTasks.length - 2} more`;
+                tasksDiv.appendChild(moreDiv);
+            }
+
+            dayDiv.appendChild(tasksDiv);
+        }
+
+        // Add click handler to show tasks for the day
+        dayDiv.addEventListener('click', () => showDayTasks(date, dayTasks));
+
+        return dayDiv;
+    }
+
+    function showDayTasks(date, tasks) {
+        const dateStr = date.toLocaleDateString('default', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        let content = `<h3>${dateStr}</h3>`;
+
+        if (tasks.length === 0) {
+            content += '<p>No tasks due on this day.</p>';
+        } else {
+            content += '<ul style="list-style: none; padding: 0;">';
+            tasks.forEach(task => {
+                content += `
+                    <li style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                        <div style="font-weight: bold;">${task.text}</div>
+                        ${task.description ? `<div style="color: #666; margin-top: 4px;">${task.description}</div>` : ''}
+                    </li>
+                `;
+            });
+            content += '</ul>';
+        }
+
+        // Show in a dialog
+        const dialog = document.createElement('div');
+        dialog.className = 'dialog-overlay';
+        dialog.style.display = 'flex';
+
+        dialog.innerHTML = `
+            <div class="dialog">
+                ${content}
+                <div class="dialog-buttons">
+                    <button onclick="this.closest('.dialog-overlay').remove()">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(dialog);
+    }
+
+    function previousMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+        updateCalendar();
+    }
+
+    function nextMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        updateCalendar();
+    }
+
+    function loadKanban() {
+        if (!db) return;
+
+        const transaction = db.transaction(STORE_NAME, 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+            const tasks = request.result;
+            const today = new Date().toISOString().split('T')[0];
+
+            // Filter out daily reset tasks that were completed today
+            const visibleTasks = tasks.filter(task => {
+                if (task.resetDaily) {
+                    return task.lastReset !== today;
+                }
+                return true;
+            });
+
+            const columns = {
+                todo: document.querySelector('[data-section="todo"] .kanban-column-content'),
+                'in progress': document.querySelector('[data-section="in progress"] .kanban-column-content'),
+                done: document.querySelector('[data-section="done"] .kanban-column-content')
+            };
+
+            // Clear existing content
+            Object.values(columns).forEach(column => column.innerHTML = '');
+
+            // Sort tasks by position within each section
+            visibleTasks.sort((a, b) => a.position - b.position)
+                .forEach(task => {
+                    const column = columns[task.section || 'todo'];
+                    if (column) {
+                        column.appendChild(createKanbanTask(task));
+                    }
+                });
+        };
+    }
+
+    function createKanbanTask(task) {
+        const div = document.createElement('div');
+        div.className = 'kanban-task';
+        div.draggable = true;
+        div.dataset.id = task.id;
+
+        const title = document.createElement('div');
+        title.className = 'kanban-task-title';
+        title.textContent = task.text;
+
+        const description = document.createElement('div');
+        description.className = 'kanban-task-description';
+        description.textContent = task.description || '';
+
+        div.appendChild(title);
+        if (task.description) {
+            div.appendChild(description);
+        }
+
+        // Add drag and drop event listeners
+        div.addEventListener('dragstart', handleKanbanDragStart);
+        div.addEventListener('dragend', handleKanbanDragEnd);
+        div.addEventListener('click', () => openEditDialog(task));
+
+        return div;
+    }
+
+    function handleKanbanDragStart(e) {
+        draggedTask = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        // Set custom data to identify this as a task drag
+        e.dataTransfer.setData('application/x-task', this.dataset.id);
+    }
+
+    function handleKanbanDragEnd(e) {
+        this.classList.remove('dragging');
+        document.querySelectorAll('.kanban-column').forEach(column => {
+            column.classList.remove('drag-over');
+        });
+    }
+
+    async function addKanbanJournalEntry(taskText, fromSection, toSection) {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction('kanbanJournal', 'readwrite');
+            const store = transaction.objectStore('kanbanJournal');
+
+            const entry = {
+                type: 'kanban_move',
+                taskText,
+                fromSection,
+                toSection,
+                timestamp: new Date().toISOString()
+            };
+
+            await new Promise((resolve, reject) => {
+                const request = store.add(entry);
+                request.onsuccess = resolve;
+                request.onerror = reject;
+            });
+        } catch (error) {
+            console.error('Error adding kanban journal entry:', error);
+            showStatus('Error updating journal', true);
+        }
+    }
+
+    function createKanbanJournalItem(entry) {
+        const div = document.createElement('div');
+        div.className = 'journal-item';
+        div.dataset.id = entry.id;
+        div.dataset.storeType = 'kanbanJournal';
+
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'journal-time';
+        timeDiv.textContent = new Date(entry.timestamp).toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'journal-content';
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'journal-title';
+        titleDiv.innerHTML = `🔄 Moved task: "${entry.taskText}"`;
+
+        const descDiv = document.createElement('div');
+        descDiv.className = 'journal-description';
+        descDiv.textContent = `From ${entry.fromSection} to ${entry.toSection}`;
+
+        contentDiv.appendChild(titleDiv);
+        contentDiv.appendChild(descDiv);
+
+        // Create and append delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-button';
+        deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+        deleteButton.onclick = () => confirmDeleteJournalEntry(entry.id, 'kanbanJournal');
+        div.appendChild(deleteButton);
+
+        div.appendChild(timeDiv);
+        div.appendChild(contentDiv);
+
+        return div;
+    }
+
+    function groupEntriesByDay(entries) {
+        const groups = {};
+        entries.forEach(entry => {
+            const day = entry.timestamp.split('T')[0];
+            if (!groups[day]) {
+                groups[day] = [];
+            }
+            groups[day].push(entry);
+        });
+        return groups;
+    }
+
+    async function completeTaskFromDialog() {
+        if (!db || !currentEditingId) return;
+
+        try {
+            // Call the existing deleteTask function which handles completion
+            await deleteTask(currentEditingId);
+
+            // Close the dialog after completing the task
+            closeEditDialog();
+
+            // Show success message
+            showStatus('Task marked as complete');
+        } catch (error) {
+            console.error('Error completing task:', error);
+            showStatus('Error completing task', true);
+        }
+    }
+
+    async function exportDatabase() {
+        if (!db) {
+            showStatus('Database not initialized', true);
+            return;
+        }
+
+        try {
+            // Create object to hold all store data
+            const exportData = {};
+
+            // List of stores to export
+            const stores = [STORE_NAME, COMPLETED_STORE, KANBAN_JOURNAL_STORE];
+
+            // Export each store
+            for (const storeName of stores) {
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                exportData[storeName] = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = reject;
+                });
+            }
+
+            // Create a Blob with the JSON data
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+                type: 'application/json'
+            });
+
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            a.href = url;
+            a.download = `todoyou-backup-${timestamp}.json`;
+
+            // Trigger download
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showStatus('Database exported successfully');
+        } catch (error) {
+            console.error('Error exporting database:', error);
+            showStatus('Error exporting database', true);
+        }
+    }
+
+    async function importDatabase(file) {
+        if (!db) {
+            showStatus('Database not initialized', true);
+            return;
+        }
+
+        try {
+            const content = await file.text();
+            const importData = JSON.parse(content);
+
+            // Validate imported data structure
+            const requiredStores = [STORE_NAME, COMPLETED_STORE, KANBAN_JOURNAL_STORE];
+            for (const storeName of requiredStores) {
+                if (!importData[storeName] || !Array.isArray(importData[storeName])) {
+                    throw new Error(`Invalid import file: missing or invalid ${storeName} store`);
+                }
+            }
+
+            // Start transaction for all stores
+            const transaction = db.transaction(requiredStores, 'readwrite');
+
+            // Clear and import each store
+            for (const storeName of requiredStores) {
+                const store = transaction.objectStore(storeName);
+
+                // Clear existing data
+                await new Promise((resolve, reject) => {
+                    const clearRequest = store.clear();
+                    clearRequest.onsuccess = resolve;
+                    clearRequest.onerror = reject;
+                });
+
+                // Import new data
+                for (const item of importData[storeName]) {
+                    await new Promise((resolve, reject) => {
+                        const addRequest = store.add(item);
+                        addRequest.onsuccess = resolve;
+                        addRequest.onerror = reject;
+                    });
+                }
+            }
+
+            // Refresh all views
+            loadTasks();
+            loadKanban();
+            loadJournal();
+            updateCalendar();
+
+            showStatus('Database imported successfully');
+        } catch (error) {
+            console.error('Error importing database:', error);
+            showStatus('Error importing database: ' + error.message, true);
+        }
+    }
+
+    async function loadCompletedTasks() {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction(COMPLETED_STORE, 'readonly');
+            const store = transaction.objectStore(COMPLETED_STORE);
+            const completedTasks = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            // Sort by completion date, most recent first
+            completedTasks.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+            const completedList = document.getElementById('completedTaskList');
+            completedList.innerHTML = '';
+
+            // Update count
+            const countSpan = document.getElementById('completedCount');
+            countSpan.textContent = `(${completedTasks.length})`;
+
+            completedTasks.forEach(task => {
+                const li = createCompletedTaskElement(task);
+                completedList.appendChild(li);
+            });
+        } catch (error) {
+            console.error('Error loading completed tasks:', error);
+            showStatus('Error loading completed tasks', true);
+        }
+    }
+
+    function createCompletedTaskElement(task) {
+        const li = document.createElement('li');
+        li.className = 'task-item';
+        li.style.opacity = '0.8';
+
+        // Create completion time element
+        const completionTime = document.createElement('div');
+        completionTime.className = 'completion-time';
+        completionTime.style.fontSize = '0.8em';
+        completionTime.style.color = '#666';
+        completionTime.textContent = new Date(task.completedAt).toLocaleString();
+
+        // Create task text container
+        const textContainer = document.createElement('div');
+        textContainer.className = 'task-text';
+        textContainer.style.flex = '1';
+
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = task.text;
+        titleSpan.style.textDecoration = 'line-through';
+        textContainer.appendChild(titleSpan);
+
+        if (task.description) {
+            const descSpan = document.createElement('div');
+            descSpan.className = 'task-description';
+            descSpan.textContent = task.description;
+            descSpan.style.textDecoration = 'line-through';
+            textContainer.appendChild(descSpan);
+        }
+
+        // Create undo button
+        const undoButton = document.createElement('button');
+        undoButton.className = 'undo-button';
+        undoButton.style.cssText = 'background: none; border: none; color: #4CAF50; cursor: pointer; padding: 5px; display: none;';
+        undoButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7v6h6"></path>
+            <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"></path>
+        </svg>
+    `;
+        undoButton.onclick = () => undoCompletedTask(task.id);
+
+        // Show undo button on hover
+        li.onmouseenter = () => undoButton.style.display = 'block';
+        li.onmouseleave = () => undoButton.style.display = 'none';
+
+        // Assemble the elements
+        li.appendChild(completionTime);
+        li.appendChild(textContainer);
+        li.appendChild(undoButton);
+
+        return li;
+    }
+
+    async function undoCompletedTask(id) {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction([COMPLETED_STORE, STORE_NAME], 'readwrite');
+            const completedStore = transaction.objectStore(COMPLETED_STORE);
+            const activeStore = transaction.objectStore(STORE_NAME);
+
+            // Get the completed task
+            const completedTask = await new Promise((resolve, reject) => {
+                const request = completedStore.get(id);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            if (completedTask) {
+                // Remove completedAt and prepare for active tasks
+                const {completedAt, id: oldId, ...taskToRestore} = completedTask;
+
+                // Add to active tasks
+                await new Promise((resolve, reject) => {
+                    const request = activeStore.add(taskToRestore);
+                    request.onsuccess = resolve;
+                    request.onerror = reject;
+                });
+
+                // Remove from completed tasks
+                await new Promise((resolve, reject) => {
+                    const request = completedStore.delete(id);
+                    request.onsuccess = resolve;
+                    request.onerror = reject;
+                });
+
+                // Refresh both lists
+                loadTasks();
+                loadCompletedTasks();
+                loadKanban();
+                updateCalendar();
+
+                showStatus('Task restored successfully');
+            }
+        } catch (error) {
+            console.error('Error restoring task:', error);
+            showStatus('Error restoring task', true);
+        }
+    }
+
+    async function confirmDeleteJournalEntry(id, storeType) {
+        const confirmed = await showDeleteConfirmation('Are you sure you want to delete this journal entry?');
+        if (confirmed) {
+            await deleteJournalEntry(id, storeType);
+        }
+    }
+
+    async function deleteJournalEntry(id, storeType) {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction(storeType, 'readwrite');
+            const store = transaction.objectStore(storeType);
+
+            await new Promise((resolve, reject) => {
+                const request = store.delete(id);
+                request.onsuccess = resolve;
+                request.onerror = reject;
+            });
+
+            // Reload journal to reflect changes
+            loadJournal();
+            showStatus('Journal entry deleted successfully');
+        } catch (error) {
+            console.error('Error deleting journal entry:', error);
+            showStatus('Error deleting journal entry', true);
+        }
+    }
+
+    async function updateContextsList() {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const tasks = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            // Update the autocomplete contexts set
+            currentContexts = new Set(
+                tasks
+                    .map(task => task.context)
+                    .filter(Boolean)
+                    .map(context => context.toLowerCase())
+            );
+
+            // Update the context filter dropdown
+            const contextFilter = document.getElementById('contextFilter');
+            const selectedContext = contextFilter.value; // Store current selection
+
+            // Get unique contexts preserving case
+            const uniqueContexts = [...new Set(tasks
+                .map(task => task.context)
+                .filter(Boolean))];
+
+            // Clear existing options except the first one (All Contexts)
+            while (contextFilter.options.length > 1) {
+                contextFilter.remove(1);
+            }
+
+            // Add context options
+            uniqueContexts.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+                .forEach(context => {
+                    const option = new Option(context, context);
+                    contextFilter.add(option);
+                });
+
+            // Restore previous selection if it still exists
+            if (selectedContext && uniqueContexts.includes(selectedContext)) {
+                contextFilter.value = selectedContext;
+            }
+
+            // Update clear filter button visibility
+            const clearFilter = document.getElementById('clearFilter');
+            if (clearFilter) {
+                clearFilter.style.display = contextFilter.value ? 'block' : 'none';
+            }
+
+        } catch (error) {
+            console.error('Error updating contexts list:', error);
+        }
+    }
+
+    function getContextAtCursor(input, cursorPosition) {
+        // Find the last @ before the cursor
+        const textBeforeCursor = input.slice(0, cursorPosition);
+        const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+        if (lastAtIndex === -1) return null;
+
+        // Find the end of the context (next space or end of string)
+        const textAfterAt = input.slice(lastAtIndex + 1);
+        const nextSpaceIndex = textAfterAt.indexOf(' ');
+        const contextEnd = nextSpaceIndex === -1 ? textAfterAt.length : nextSpaceIndex;
+
+        return {
+            start: lastAtIndex,
+            end: lastAtIndex + 1 + contextEnd,
+            text: textAfterAt.slice(0, contextEnd)
+        };
+    }
+
+    function logStreakCalculation(task, action, details) {
+        console.log(`Streak calculation [${action}]:`, {
+            taskText: task.text,
+            currentStreak: task.currentStreak,
+            lastStreakUpdate: task.lastStreakUpdate,
+            lastReset: task.lastReset,
+            ...details
+        });
+    }
+
+    // Function to setup autocomplete for an input field
+    function setupContextAutocomplete(inputEl, isContextField = false) {
+        let container = inputEl.parentElement.querySelector('.suggestions-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'suggestions-container';
+            inputEl.parentElement.appendChild(container);
+        }
+
+        function showContextSuggestions(input, cursorPosition) {
+            let searchText;
+            let contextInfo = null;
+
+            if (isContextField) {
+                // For context field, use the entire input
+                searchText = input.toLowerCase();
+            } else {
+                // For main input, find the context at cursor position
+                contextInfo = getContextAtCursor(input, cursorPosition);
+                if (!contextInfo) {
+                    container.style.display = 'none';
+                    return;
+                }
+                searchText = contextInfo.text.toLowerCase();
+            }
+
+            // Filter contexts that match the search text
+            const matches = Array.from(currentContexts)
+                .filter(context => context.toLowerCase().includes(searchText))
+                .sort();
+
+            if (matches.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            // Create suggestion elements
+            container.innerHTML = '';
+            matches.forEach((context, index) => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                if (index === selectedSuggestionIndex) {
+                    div.classList.add('selected');
+                }
+                div.textContent = context;
+                div.onclick = () => {
+                    if (isContextField) {
+                        // For context field, replace entire value
+                        inputEl.value = context;
+                    } else {
+                        // For main input, replace only the current @context
+                        const before = input.slice(0, contextInfo.start + 1); // Include the @
+                        const after = input.slice(contextInfo.end);
+                        inputEl.value = before + context + after;
+                        inputEl.setSelectionRange(
+                            contextInfo.start + context.length + 1,
+                            contextInfo.start + context.length + 1
+                        );
+                    }
+                    container.style.display = 'none';
+                    inputEl.focus();
+                };
+                container.appendChild(div);
+            });
+
+            container.style.display = 'block';
+        }
+
+        // Track cursor position
+        let currentCursorPosition = 0;
+        inputEl.addEventListener('keyup', (e) => {
+            currentCursorPosition = e.target.selectionStart;
+        });
+        inputEl.addEventListener('click', (e) => {
+            currentCursorPosition = e.target.selectionStart;
+        });
+
+        // Input event handler
+        inputEl.addEventListener('input', (e) => {
+            const input = e.target.value;
+            currentCursorPosition = e.target.selectionStart;
+
+            if (isContextField || input.includes('@')) {
+                showContextSuggestions(input, currentCursorPosition);
+            }
+        });
+
+        // Keyboard navigation
+        inputEl.addEventListener('keydown', (e) => {
+            if (container.style.display !== 'block') return;
+
+            const suggestions = container.children;
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    selectedSuggestionIndex = Math.min(
+                        selectedSuggestionIndex + 1,
+                        suggestions.length - 1
+                    );
+                    if (selectedSuggestionIndex === -1) selectedSuggestionIndex = 0;
+                    showContextSuggestions(inputEl.value, currentCursorPosition);
+                    break;
+
+                case 'ArrowUp':
+                    e.preventDefault();
+                    selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
+                    showContextSuggestions(inputEl.value, currentCursorPosition);
+                    break;
+
+                case 'Enter':
+                    if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+                        e.preventDefault();
+                        suggestions[selectedSuggestionIndex].click();
+                        selectedSuggestionIndex = -1;
+                    }
+                    break;
+
+                case 'Escape':
+                    container.style.display = 'none';
+                    selectedSuggestionIndex = -1;
+                    break;
+            }
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.autocomplete-container')) {
+                container.style.display = 'none';
+                selectedSuggestionIndex = -1;
+            }
+        });
+    }
+
+    function checkExpiredStreak(habit) {
+        if (!habit.lastStreakUpdate) return 0;
+
+        const lastUpdate = new Date(habit.lastStreakUpdate);
+        const now = new Date();
+        const daysSinceUpdate = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
+
+        return daysSinceUpdate > 1 ? 0 : (habit.currentStreak || 0);
+    }
+
+    async function resetAllStreaks() {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                const tasks = request.result;
+                tasks.forEach(task => {
+                    if (task.resetDaily) {
+                        const updatedTask = {...task};
+                        updatedTask.currentStreak = 0;
+                        updatedTask.lastStreakUpdate = null;
+                        updatedTask.lastReset = null;
+                        // Keep the bestStreak value!
+                        // updatedTask.bestStreak stays unchanged
+                        store.put(updatedTask);
+                    }
+                });
+                loadTasks();
+                loadKanban();
+                console.log('All current streaks have been reset');
+            };
+        } catch (error) {
+            console.error('Error resetting streaks:', error);
+        }
+    }
+
+    async function loadHabits() {
+        if (!db) return;
+
+        // First, ensure Chart.js is loaded
+        if (typeof Chart === 'undefined') {
+            await loadChartJS();
+        }
+
+        const habitsList = document.getElementById('habitsList');
+        const sortSelect = document.getElementById('habitSort');
+        const sortDirection = document.getElementById('sortDirection');
+        const chartContainer = document.querySelector('.chart-container');
+
+        const transaction = db.transaction(STORE_NAME, 'readwrite'); // Changed to readwrite
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+            const tasks = request.result;
+            const habits = tasks.filter(task => task.resetDaily);
+
+            // Update expired streaks in database
+            habits.forEach(habit => {
+                const currentStreak = checkExpiredStreak(habit);
+                if (currentStreak !== habit.currentStreak) {
+                    const updatedHabit = {...habit, currentStreak};
+                    store.put(updatedHabit);
+                }
+            });
+
+            if (habits.length === 0) {
+                habitsList.innerHTML = '<div class="no-habits">No daily habits created yet. Add a task with [daily] to create one.</div>';
+                chartContainer.style.display = 'none';
+                return;
+            }
+
+            chartContainer.style.display = 'block';
+
+            // Sort habits based on current criteria
+            const sortField = sortSelect.value;
+            const isAscending = sortDirection.textContent === '↑';
+
+            habits.sort((a, b) => {
+                let valA, valB;
+                switch(sortField) {
+                    case 'streak':
+                        // Use checked streaks for sorting
+                        valA = checkExpiredStreak(a);
+                        valB = checkExpiredStreak(b);
+                        break;
+                    case 'bestStreak':
+                        valA = a.bestStreak || a.currentStreak || 0;
+                        valB = b.bestStreak || b.currentStreak || 0;
+                        break;
+                    default: // 'name'
+                        valA = a.text.toLowerCase();
+                        valB = b.text.toLowerCase();
+                        return isAscending ?
+                            valA.localeCompare(valB) :
+                            valB.localeCompare(valA);
+                }
+                return isAscending ? valA - valB : valB - valA;
+            });
+
+            // Update chart
+            updateStreakChart(habits);
+
+            // Render habits list
+            habitsList.innerHTML = habits.map(habit => {
+                // Check streak here for display
+                const streak = checkExpiredStreak(habit);
+                const bestStreak = habit.bestStreak || streak;
+                const lastUpdate = habit.lastStreakUpdate ?
+                    new Date(habit.lastStreakUpdate).toLocaleDateString() :
+                    'Not started';
+
+                return `
+                <div class="habit-item">
+                    <div class="habit-info">
+                        <div class="habit-name">${habit.text}</div>
+                        ${habit.description ?
+                    `<div class="habit-description">${habit.description}</div>` :
+                    ''}
+                        <div class="habit-last-update">Last completed: ${lastUpdate}</div>
+                    </div>
+                    <div class="habit-stats">
+                        <div class="streak-badge current-streak">
+                            <span>🔥</span>
+                            <span>${streak}</span>
+                            <span class="streak-label">Current</span>
+                        </div>
+                        <div class="streak-badge best-streak">
+                            <span>🏆</span>
+                            <span>${bestStreak}</span>
+                            <span class="streak-label">Best</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            }).join('');
+        };
+    }
+
+    function updateStreakChart(habits) {
+        const canvas = document.getElementById('streakChart');
+        const ctx = canvas.getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (habitChart) {
+            habitChart.destroy();
+        }
+
+        // Take top 5 habits for the chart, using checked streaks
+        const topHabits = habits
+            .map(habit => ({
+                ...habit,
+                currentStreak: checkExpiredStreak(habit) // Use checked streak for chart
+            }))
+            .sort((a, b) => (b.bestStreak || 0) - (a.bestStreak || 0))
+            .slice(0, 5);
+
+        habitChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: topHabits.map(habit => habit.text),
+                datasets: [
+                    {
+                        label: 'Current Streak',
+                        data: topHabits.map(habit => habit.currentStreak || 0),
+                        backgroundColor: '#2196F3',
+                        borderColor: '#1976D2',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Best Streak',
+                        data: topHabits.map(habit => habit.bestStreak || habit.currentStreak || 0),
+                        backgroundColor: '#4CAF50',
+                        borderColor: '#388E3C',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Days'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            callback: function(value) {
+                                const label = this.getLabelForValue(value);
+                                return label.length > 15 ? label.substr(0, 15) + '...' : label;
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Top 5 Habit Streaks'
+                    }
+                }
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setupTabs();
+        setupDropZone();
+        loadKanban();
+        loadHabits();
+        loadCompletedTasks();
+        checkDailyResets();
+        setupAutoReset();
+        updateContextsList();
+
+        const habitSort = document.getElementById('habitSort');
+        const sortDirection = document.getElementById('sortDirection');
+
+        habitSort?.addEventListener('change', loadHabits);
+        sortDirection?.addEventListener('click', (e) => {
+            e.target.textContent = e.target.textContent === '↓' ? '↑' : '↓';
+            loadHabits();
+        });
+
+        const oldSetupTabs = window.setupTabs;
+        window.setupTabs = function() {
+            oldSetupTabs();
+            document.querySelector('[data-tab="habits"]').addEventListener('click', loadHabits);
+        };
+
+        // Setup autocomplete for main input
+        const mainInput = document.getElementById('newTask');
+        if (!mainInput.parentElement.classList.contains('autocomplete-container')) {
+            const container = document.createElement('div');
+            container.className = 'autocomplete-container';
+            mainInput.parentNode.insertBefore(container, mainInput);
+            container.appendChild(mainInput);
+        }
+        setupContextAutocomplete(mainInput, false);
+
+
+        const toggleBtn = document.getElementById('toggleCompletedBtn');
+        const completedList = document.getElementById('completedTaskList');
+        const chevron = toggleBtn.querySelector('.chevron-right');
+
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = completedList.style.display === 'none';
+            completedList.style.display = isHidden ? 'block' : 'none';
+            chevron.style.transform = isHidden ? 'rotate(90deg)' : '';
+        });
+
+        const contextFilter = document.getElementById('contextFilter');
+        const clearFilter = document.getElementById('clearFilter');
+
+        contextFilter.addEventListener('change', () => {
+            loadTasks();
+            clearFilter.style.display = contextFilter.value ? 'block' : 'none';
+        });
+
+        clearFilter.addEventListener('click', () => {
+            contextFilter.value = '';
+            loadTasks();
+            clearFilter.style.display = 'none';
+        });
+
+        const originalOpenEditDialog = window.openEditDialog;
+        window.openEditDialog = function (task) {
+            originalOpenEditDialog(task);
+            const editContextInput = document.getElementById('editTaskContext');
+            if (!editContextInput.parentElement.classList.contains('autocomplete-container')) {
+                const container = document.createElement('div');
+                container.className = 'autocomplete-container';
+                editContextInput.parentNode.insertBefore(container, editContextInput);
+                container.appendChild(editContextInput);
+            }
+            setupContextAutocomplete(editContextInput, true);
+        };
+
+
+        // Update contexts list when tasks change
+        const oldLoadTasks = window.loadTasks;
+        window.loadTasks = async function () {
+            await oldLoadTasks();
+            await updateContextsList();
+        };
+
+        const originalSaveEditedTask = window.saveEditedTask;
+        window.saveEditedTask = async function () {
+            await originalSaveEditedTask();
+            await updateContextsList();
+        };
+
+        // Update the delete task function
+        const originalDeleteTask = window.deleteTask;
+        window.deleteTask = async function (id) {
+            await originalDeleteTask(id);
+            await updateContextsList();
+        };
+
+        // Load completed tasks initially
+
+        document.querySelectorAll('.kanban-column').forEach(column => {
+            column.addEventListener('dragover', (e) => {
+                // Only allow drop if it's a task being dragged
+                if (e.dataTransfer.types.includes('application/x-task')) {
+                    e.preventDefault();
+                    column.classList.add('drag-over');
+                }
+            });
+
+            column.addEventListener('dragleave', (e) => {
+                column.classList.remove('drag-over');
+            });
+
+            column.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                column.classList.remove('drag-over');
+
+                if (!e.dataTransfer.types.includes('application/x-task')) return;
+                if (!draggedTask) return;
+
+                const newSection = column.dataset.section;
+                const taskId = parseInt(draggedTask.dataset.id);
+
+                try {
+                    const transaction = db.transaction(STORE_NAME, 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.get(taskId);
+
+                    request.onsuccess = async () => {
+                        const task = request.result;
+                        const oldSection = task.section || 'todo';
+                        task.section = newSection;
+
+                        await store.put(task);
+                        await addKanbanJournalEntry(task.text, oldSection, newSection);
+
+                        loadKanban();
+                        loadTasks();
+                        loadJournal();
+                        showStatus('Task moved successfully');
+                    };
+                } catch (error) {
+                    console.error('Error moving task:', error);
+                    showStatus('Error moving task', true);
+                }
+            });
+        });
+
+
+        document.getElementById('newTask').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addTask();
+            }
+        });
+
+        // Add keyboard support for dialog
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeEditDialog();
+            }
+            if (e.key === 'Enter' && e.ctrlKey) {
+                if (document.getElementById('editDialog').style.display === 'flex') {
+                    saveEditedTask();
+                }
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                exportDatabase();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+                e.preventDefault();
+
+                // Create and trigger file input
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        importDatabase(file);
+                    }
+                };
+                input.click();
+            }
+        });
+    });
+</script>
+</body>
+</html>

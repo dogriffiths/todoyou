@@ -1,0 +1,2753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Whiteboard App</title>
+    <link rel="manifest" href="multiboard-manifest.json">
+    <link rel="shortcut icon" type="image/x-icon" href="./favicon.ico">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="description"
+          content="Create, collaborate, and organize ideas with our intuitive multi-whiteboard app. Featuring infinite canvases, sticky notes, and easy sharing. Perfect for brainstorming, teaching, and remote teamwork.">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+    <link rel="apple-touch-icon" href="multiboard-192x192.png">
+    <link href="https://fonts.googleapis.com/css2?family=Delicious+Handrawn&display=swap" rel="preload" as="style">
+    <style>
+        /* ========== Global Styles ========== */
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        /* ========== Layout ========== */
+        #canvasContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            transform: none;
+            transform-origin: center;
+            border-width: 0;
+        }
+
+        #canvas {
+            position: absolute;
+            width: 1920px;
+            height: 1080px;
+            left: 50%;
+            top: 50%;
+        }
+
+        /* ========== Component Styles ========== */
+        /* Control Panel */
+        .control-panel {
+            position: fixed;
+            bottom: 20px;
+            z-index: 1000;
+            background-color: rgba(28, 28, 28, 0.8);
+            color: white;
+            padding: 8px 9px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.12);
+        }
+
+        #drawing-controls {
+            right: 36px;
+        }
+
+        #navigation {
+            left: 36px;
+        }
+
+        /* Buttons */
+        .round-button {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #666;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            transition: all 0.3s ease;
+            background-color: #555;
+            color: white;
+        }
+
+        .round-button:hover {
+            background-color: #666;
+        }
+
+        .round-button svg {
+            width: 18px;
+            height: 18px;
+            transition: all 0.3s ease;
+            stroke: white;
+        }
+
+        .round-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: #444;
+        }
+
+        /* Tool Group */
+        .tool-group {
+            display: flex;
+            margin-right: 10px;
+        }
+
+        .tool-group .round-button {
+            border-radius: 0;
+            margin: 0;
+        }
+
+        .tool-group .round-button:first-child {
+            border-top-left-radius: 15px;
+            border-bottom-left-radius: 15px;
+        }
+
+        .tool-group .round-button:last-child {
+            border-top-right-radius: 15px;
+            border-bottom-right-radius: 15px;
+        }
+
+        /* Color Picker and Brush Size */
+        #colorPicker {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #666;
+            padding: 0;
+            border-radius: 50%;
+            overflow: hidden;
+            background-color: #555;
+        }
+
+        #brushSize {
+            width: 250px;
+            background-color: #555;
+        }
+
+        .brush-size-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            transform-origin: center left;
+        }
+
+        #brushSizeDisplay {
+            font-size: 12px;
+            margin-top: 5px;
+            width: 38px;
+            text-align: center;
+            border: 1px solid #666;
+            border-radius: 3px;
+            padding: 2px;
+            background-color: #555;
+            color: white;
+        }
+
+        /* Overview */
+        #overviewContainer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: calc(100% - 40px);
+            height: 100%;
+            background-color: rgba(245, 245, 245, 0.5);
+            z-index: 2000;
+            overflow-y: auto;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        #overviewContainer.visible {
+            opacity: 1;
+        }
+
+        #overviewGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(224px, 1fr));
+            row-gap: 20px;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .overviewItem {
+            display: flex;
+            cursor: default; /* Change this line */
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            pointer-events: auto;
+            transition: transform 0.3s ease-in-out;
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+
+        .overviewItem.current-board {
+            border: 2px solid #3D8BFF;
+            box-shadow: 0 0 10px rgba(61, 139, 255, 0.5);
+        }
+
+        .insert-indicator {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #3D8BFF;
+            display: none;
+            z-index: 10;
+        }
+
+        .insert-indicator.left {
+            left: -2px;
+        }
+
+        .insert-indicator.right {
+            right: -2px;
+        }
+
+        .overviewItem.insert-left .insert-indicator.left,
+        .overviewItem.insert-right .insert-indicator.right {
+            display: block;
+        }
+
+        .overviewItem.dragging {
+            cursor: move; /* Add this new class */
+        }
+
+        .overviewItem.over {
+            border: 2px dashed #000;
+        }
+
+        .overviewItem.insert-left {
+            transform: translateX(2px);
+        }
+
+        .overviewItem.insert-right {
+            transform: translateX(-2px);
+        }
+
+        .overviewItem.dragging {
+            opacity: 0.5;
+            z-index: 1000;
+        }
+
+        .overviewImage {
+            width: 200px;
+            height: 150px;
+            border: 1px solid #ccc;
+            object-fit: contain;
+            box-shadow: 0px 0.5px 2px 2px rgba(0, 0, 0, 0.05);
+            background-color: white;
+        }
+
+        .blankThumbnail {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            color: #888;
+        }
+
+        .overviewName {
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        /* Dialog */
+        .dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #1C1C1C;
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 300px;
+            z-index: 2000;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1), 0 8px 32px rgba(0, 0, 0, 0.12);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .dialog h1 {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .dialog h2 {
+            font-size: 18px;
+            color: #AAAAAA;
+            margin-bottom: 16px;
+        }
+
+        .dialog p {
+            margin-bottom: 20px;
+            line-height: 180%;
+        }
+
+        .dialog-buttons {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .dialog-button {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+        .dialog-button-secondary {
+            background-color: transparent;
+            color: white;
+            border: 1px solid #444444;
+        }
+
+        .dialog-button-primary {
+            background-color: #E6D6FF;
+            color: black;
+        }
+
+        /* ========== Specific Element Styles ========== */
+        /* Buttons */
+        #clearBtn {
+            background-color: #FF6B6B;
+        }
+
+        #clearBtn:hover {
+            background-color: #FF8787;
+        }
+
+        #newBoardBtn {
+            background-color: #4ECB71;
+        }
+
+        #newBoardBtn:hover {
+            background-color: #69D687;
+        }
+
+        #saveBtn {
+            background-color: #4DA3FF;
+        }
+
+        #saveBtn:hover {
+            background-color: #69B3FF;
+        }
+
+        #pdfExportBtn {
+            background-color: #ff0000; /* Green background */
+        }
+
+        #pdfExportBtn:hover {
+            background-color: #ff5555; /* Darker green on hover */
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #pdfExportBtn.busy svg {
+            animation: spin 1s linear infinite;
+        }
+
+        #pdfExportBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #undoBtn {
+            background-color: #FFA94D;
+        }
+
+        #undoBtn:hover {
+            background-color: #FFB969;
+        }
+
+        #gridBtn, #overviewBtn {
+            background-color: transparent;
+            filter: grayscale(100%) brightness(1.2);
+        }
+
+        #gridBtn:hover, #overviewBtn:hover {
+            background-color: #666;
+            filter: grayscale(50%) brightness(1.1);
+        }
+
+        #gridBtn.active, #overviewBtn.active {
+            background-color: #3D8BFF;
+            filter: none;
+        }
+
+        #fullscreenBtn, #fileSelectBtn {
+            background-color: #B96BFF;
+        }
+
+        #fullscreenBtn:hover, #fileSelectBtn:hover {
+            background-color: #C484FF;
+        }
+
+        #penBtn, #highlighterBtn, #eraserBtn {
+            background-color: transparent;
+            filter: grayscale(100%) brightness(1.2);
+        }
+
+        #penBtn svg, #highlighterBtn svg, #eraserBtn svg {
+            stroke: #808080;
+        }
+
+        #penBtn:hover, #highlighterBtn:hover, #eraserBtn:hover {
+            background-color: #666;
+            filter: grayscale(50%) brightness(1.1);
+        }
+
+        #penBtn.active, #highlighterBtn.active, #eraserBtn.active {
+            filter: none;
+        }
+
+        #penBtn.active {
+            background-color: #4ECB71;
+        }
+
+        #penBtn.active:hover {
+            background-color: #69D687;
+        }
+
+        #highlighterBtn.active {
+            background-color: #FFD43B;
+        }
+
+        #highlighterBtn.active:hover {
+            background-color: #FFE066;
+        }
+
+        #highlighterBtn.active svg {
+            stroke: black;
+        }
+
+        #eraserBtn.active {
+            background-color: #FF6B6B;
+        }
+
+        #eraserBtn.active:hover {
+            background-color: #FF8787;
+        }
+
+        /* Other Elements */
+        #boardInfo {
+            margin: 0 8px;
+            color: white;
+            font-size: 0.95em;
+            cursor: pointer;
+            min-width: 130px;
+            max-width: 130px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+
+        #boardTitleInput {
+            display: none;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 0.95em;
+            padding: 2px 5px;
+            width: 146px;
+        }
+
+        .removeWhiteboardBtn {
+            position: absolute;
+            top: 4px;
+            right: 1.5ex;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(64, 64, 64, 0.3);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .removeWhiteboardBtn:hover {
+            background-color: rgba(64, 64, 64, 1);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* ========== Animations ========== */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -48%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        body.inverted {
+            background-color: black;
+        }
+
+        .inverted #canvasContainer {
+            filter: invert(100%);
+        }
+
+        #invertBtn.active {
+            background-color: #FFA500;
+        }
+
+        #invertBtn.active:hover {
+            background-color: #FFB52E;
+        }
+
+
+        #stickyNotesContainer {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .sticky-note .note-content {
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+
+        #stickyNotesContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .sticky-note {
+            position: absolute;
+            background-color: #feff9c;
+            border: 1px solid #e8e8e8;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            font-family: 'Delicious Handrawn', cursive; /* Update the font-family here */
+            font-size: 24px; /* Slightly increase font size for better readability */
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .note-content {
+            flex-grow: 1;
+            resize: none;
+            overflow: auto;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            font-size: inherit;
+        }
+
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .drag-handle {
+            cursor: move;
+        }
+
+        .delete-note {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .note-content {
+            flex-grow: 1;
+            resize: none;
+            overflow: auto;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            font-size: inherit;
+        }
+
+        #toggleStickyNotesBtn.active {
+            background-color: #cccc00;
+        }
+
+        #toggleStickyNotesBtn.active:hover {
+            background-color: #eeee00;
+        }
+
+        .popup-menu {
+            display: none;
+            position: absolute;
+            background-color: #1C1C1C;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 5px 0;
+            z-index: 1000;
+            min-width: 150px; /* Ensure the menu has a minimum width */
+        }
+
+        .popup-menu button {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            text-align: left;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+
+        .popup-menu button:hover {
+            background-color: #333;
+        }
+
+        #sticky-notes-menu {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .sticky-note-item {
+            padding: 10px;
+            border-bottom: 1px solid #444;
+            cursor: pointer;
+        }
+
+        .sticky-note-item:hover {
+            background-color: #333;
+        }
+
+        .sticky-note-content {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: white;
+        }
+
+        .sticky-note-info {
+            font-size: 12px;
+            color: #888;
+        }
+
+        #showStickyNotesMenuBtn {
+            background-color: #9c27b0;
+        }
+
+        #showStickyNotesMenuBtn:hover {
+            background-color: #b52cc7;
+        }
+
+        #showStickyNotesMenuBtn.active {
+            background-color: #6a0080;
+        }
+    </style>
+</head>
+<body>
+<div id="canvasContainer">
+    <canvas id="canvas" width="1920" height="1080"></canvas>
+    <div id="stickyNotesContainer"></div>
+</div>
+<div id="overviewContainer">
+    <div id="overviewGrid"></div>
+</div>
+<div id="fileMenu" class="popup-menu">
+    <button id="savePdfBtn">Save to PDF</button>
+    <button id="savePngBtn">Save to PNG</button>
+    <button id="importPngBtn">Import PNG</button>
+    <button id="saveAllPngsBtn">Save All PNGs</button>
+    <button id="exportDbBtn">Export Database</button>
+    <button id="importDbBtn">Import Database</button>
+</div>
+<div id="sticky-notes-menu" class="popup-menu">
+    <div id="sticky-notes-list"></div>
+</div>
+<div id="drawing-controls" class="control-panel">
+    <input type="file" id="fileInput" accept="image/*">
+    <button id="invertBtn" class="round-button" title="Invert Colors">
+        <svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+            <g id="surface1">
+                <circle cx="12" cy="12" r="10" fill="white"></circle>
+                <path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;"
+                      d="M 12 5.542969 C 11.28125 5.542969 10.703125 6.125 10.703125 6.84375 C 10.703125 7.558594 11.28125 8.140625 12 8.140625 C 12.71875 8.140625 13.296875 7.558594 13.296875 6.84375 C 13.296875 6.125 12.71875 5.542969 12 5.542969 Z M 12 5.542969 "/>
+                <path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;"
+                      d="M 23.054688 7.328125 C 22.453125 5.902344 21.585938 4.613281 20.484375 3.515625 C 19.386719 2.414062 18.097656 1.546875 16.671875 0.945312 C 15.191406 0.316406 13.617188 0 12 0 C 10.382812 0 8.808594 0.316406 7.328125 0.945312 C 5.902344 1.546875 4.613281 2.414062 3.515625 3.515625 C 2.414062 4.613281 1.546875 5.902344 0.945312 7.328125 C 0.320312 8.808594 0 10.382812 0 12 C 0 13.617188 0.320312 15.191406 0.945312 16.671875 C 1.546875 18.097656 2.414062 19.386719 3.515625 20.484375 C 4.613281 21.585938 5.902344 22.453125 7.328125 23.054688 C 8.808594 23.683594 10.382812 24 12 24 C 13.617188 24 15.191406 23.683594 16.671875 23.054688 C 18.097656 22.453125 19.386719 21.585938 20.484375 20.484375 C 21.585938 19.386719 22.453125 18.097656 23.054688 16.671875 C 23.683594 15.191406 24 13.617188 24 12 C 24 10.382812 23.683594 8.808594 23.054688 7.328125 Z M 12 18.457031 C 11.28125 18.457031 10.703125 17.875 10.703125 17.160156 C 10.703125 16.441406 11.28125 15.859375 12 15.859375 C 12.71875 15.859375 13.296875 16.441406 13.296875 17.160156 C 13.296875 17.875 12.71875 18.457031 12 18.457031 Z M 15.640625 10.480469 C 14.707031 11.414062 13.421875 11.988281 12 11.988281 C 9.144531 11.988281 6.832031 14.304688 6.832031 17.160156 C 6.832031 19.847656 8.886719 22.058594 11.511719 22.304688 C 6.042969 22.050781 1.683594 17.535156 1.683594 12 C 1.683594 6.300781 6.300781 1.683594 12 1.683594 L 12 1.695312 C 13.421875 1.695312 14.707031 2.269531 15.640625 3.203125 C 16.570312 4.132812 17.148438 5.421875 17.148438 6.84375 C 17.148438 8.261719 16.570312 9.550781 15.640625 10.480469 Z M 15.640625 10.480469 "/>
+            </g>
+        </svg>
+    </button>
+    <button id="toggleStickyNotesBtn" class="round-button" title="Toggle Sticky Notes">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="10" height="6" rx="1" ry="1" stroke="white" fill="none"/>
+            <rect x="12" y="15" width="10" height="6" rx="1" ry="1" stroke="white" fill="none"/>
+        </svg>
+    </button>
+    <button id="showStickyNotesMenuBtn" class="round-button" title="Show All Sticky Notes">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+    </button>
+    <button id="resetRotationBtn" class="round-button" title="Reset Rotation">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 2L4 20h16L12 2z" fill="#000000"/>
+            <path d="M12 5.5L6.5 18.5h11L12 5.5z" fill="#ffffff"/>
+        </svg>
+    </button>
+    <button id="gridBtn" class="round-button" title="Toggle Grid">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="3" y1="15" x2="21" y2="15"></line>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+            <line x1="15" y1="3" x2="15" y2="21"></line>
+        </svg>
+    </button>
+    <input type="color" id="colorPicker" value="#000000">
+    <div class="brush-size-container">
+        <input type="range" id="brushSize" min="2.0" max="50" step="2" value="2">
+        <input type="text" id="brushSizeDisplay" value="2">
+    </div>
+    <div class="tool-group">
+        <button id="penBtn" class="round-button active" title="Pen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                <path d="M2 2l7.586 7.586"></path>
+                <circle cx="11" cy="11" r="2"></circle>
+            </svg>
+        </button>
+        <button id="highlighterBtn" class="round-button" title="Highlighter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M9 11l-6 6v3h9l3-3"></path>
+                <path d="M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"></path>
+            </svg>
+        </button>
+        <button id="eraserBtn" class="round-button" title="Eraser">
+            <svg viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M20 20H7L3 16C2 15 2 13 3 12L11 4C12 3 14 3 15 4L21 10C22 11 22 13 21 14L13 22"></path>
+            </svg>
+        </button>
+    </div>
+    <button id="undoBtn" class="round-button" title="Undo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+            <path d="M3 7v6h6"></path>
+            <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"></path>
+        </svg>
+    </button>
+    <button id="clearBtn" class="round-button" title="Clear canvas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+    </button>
+    <input type="file" id="importFileInput" accept=".zip" style="display: none;">
+    <button id="fileMenuBtn" class="round-button" title="File Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+    </button>
+</div>
+<div id="navigation" class="control-panel">
+    <button id="prevBtn" class="round-button" title="Previous whiteboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </button>
+    <span id="boardInfo"></span>
+    <input type="text" id="boardTitleInput" maxlength="20">
+    <button id="nextBtn" class="round-button" title="Next whiteboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </button>
+    <button id="overviewBtn" class="round-button" title="Whiteboard Overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="21" x2="9" y2="9"></line>
+        </svg>
+    </button>
+    <button id="fullscreenBtn" class="round-button" title="Toggle Fullscreen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+    </button>
+    <button id="duplicateBtn" class="round-button" title="Duplicate whiteboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+    </button>
+    <button id="newBoardBtn" class="round-button" title="New whiteboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+    </button>
+</div>
+<div id="errorDialog" class="dialog">
+    <h1>Error</h1>
+    <p id="errorMessage"></p>
+    <div class="dialog-buttons">
+        <button class="dialog-button dialog-button-primary" id="errorOkBtn">OK</button>
+    </div>
+</div>
+<div id="confirmDialog" class="dialog">
+    <h1>Confirm</h1>
+    <p>Are you sure you want to clear this whiteboard?</p>
+    <div class="dialog-buttons">
+        <button id="confirmNo" class="dialog-button dialog-button-secondary">No</button>
+        <button id="confirmYes" class="dialog-button dialog-button-primary">Yes</button>
+    </div>
+</div>
+<div id="removeWhiteboardDialog" class="dialog">
+    <h1>Confirm</h1>
+    <p id="removeWhiteboardMessage"></p>
+    <div class="dialog-buttons">
+        <button id="removeWhiteboardNo" class="dialog-button dialog-button-secondary">No</button>
+        <button id="removeWhiteboardYes" class="dialog-button dialog-button-primary">Yes</button>
+    </div>
+</div>
+
+<script>
+    // Constants
+    const GRID_COLUMNS = 5;
+    const GRID_ROWS = 3;
+    const GUTTER_PERCENTAGE = 5;
+
+    // DOM Elements
+    const canvasContainer = document.getElementById('canvasContainer');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const colorPicker = document.getElementById('colorPicker');
+    const brushSize = document.getElementById('brushSize');
+    const eraserBtn = document.getElementById('eraserBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const newBoardBtn = document.getElementById('newBoardBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const boardInfo = document.getElementById('boardInfo');
+    const confirmDialog = document.getElementById('confirmDialog');
+    const confirmYes = document.getElementById('confirmYes');
+    const confirmNo = document.getElementById('confirmNo');
+    const highlighterBtn = document.getElementById('highlighterBtn');
+    const overviewBtn = document.getElementById('overviewBtn');
+    const overviewContainer = document.getElementById('overviewContainer');
+    const overviewGrid = document.getElementById('overviewGrid');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const fileInput = document.getElementById('fileInput');
+    const errorDialog = document.getElementById('errorDialog');
+    const errorMessage = document.getElementById('errorMessage');
+    const errorOkBtn = document.getElementById('errorOkBtn');
+    const brushSizeDisplay = document.getElementById('brushSizeDisplay');
+    const gridBtn = document.getElementById('gridBtn');
+    const penBtn = document.getElementById('penBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const resetRotationBtn = document.getElementById('resetRotationBtn');
+    const duplicateBtn = document.getElementById('duplicateBtn');
+    const invertBtn = document.getElementById('invertBtn');
+    const stickyNotesContainer = document.getElementById('stickyNotesContainer');
+    const toggleStickyNotesBtn = document.getElementById('toggleStickyNotesBtn');
+    const importFileInput = document.getElementById('importFileInput');
+    const fileMenuBtn = document.getElementById('fileMenuBtn');
+    const fileMenu = document.getElementById('fileMenu');
+    const savePdfBtn = document.getElementById('savePdfBtn');
+    const savePngBtn = document.getElementById('savePngBtn');
+    const saveAllPngsBtn = document.getElementById('saveAllPngsBtn');
+    const importPngBtn = document.getElementById('importPngBtn');
+    const exportDbBtn = document.getElementById('exportDbBtn');
+    const importDbBtn = document.getElementById('importDbBtn');
+    const stickyNotesMenu = document.getElementById('sticky-notes-menu');
+    const stickyNotesList = document.getElementById('sticky-notes-list');
+    const showStickyNotesMenuBtn = document.getElementById('showStickyNotesMenuBtn');
+    const boardTitleInput = document.getElementById('boardTitleInput');
+
+
+    // State variables
+    // Canvas and drawing state
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let lastPressure = 1.0;
+    let canvasCenterY = canvas.height / 2;
+
+    // Tools and modes
+    let currentTool = 'pen';
+    let isPenActive = true;
+    let isErasing = false;
+    let isHighlighting = false;
+    let isTemporaryHighlighter = false;
+    let areStickyNotesVisible = false;
+
+    // Brush properties
+    let lastBrushSize = 4;
+
+    // UI state
+    let isOverviewVisible = false;
+    let isGridVisible = false;
+
+    // Keyboard modifiers
+    let isCtrlPressed = false;
+    let isShiftPressed = false;
+    let isAltPressed = false;
+
+    // Shift key constraining
+    let shiftConstrainedDirection = null;
+    let shiftStartX = null;
+    let shiftStartY = null;
+
+    //Sticky notes
+    let stickyNotes = [];
+
+    // Whiteboard management
+    let whiteboards = [{name: 'Whiteboard', title: 'Whiteboard', data: null, history: [], stickyNotes: []}];
+    let currentBoardIndex = 0;
+
+    // Miscellaneous
+    let saveTimeout;
+    let rotationDegrees = 0.0;
+
+    // Index db
+    let db;
+
+    // Enable image smoothing for anti-aliasing
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // Open IndexedDB
+    const dbPromise = indexedDB.open('WhiteboardDB', 1);
+
+    dbPromise.onupgradeneeded = function (event) {
+        db = event.target.result;
+        db.createObjectStore('whiteboards', {keyPath: 'id'});
+    };
+
+    dbPromise.onsuccess = function (event) {
+        db = event.target.result;
+        loadWhiteboardsFromIndexedDB();
+    };
+
+    dbPromise.onerror = function (event) {
+        console.error('IndexedDB error:', event.target.error);
+    };
+
+    function setActiveTool(tool) {
+        currentTool = tool;
+        isPenActive = tool === 'pen';
+        isErasing = tool === 'eraser';
+        isHighlighting = tool === 'highlighter';
+
+        // Update button states
+        penBtn.classList.toggle('active', isPenActive);
+        eraserBtn.classList.toggle('active', isErasing);
+        highlighterBtn.classList.toggle('active', isHighlighting);
+
+        // Update cursor
+        if (isErasing) {
+            canvas.style.cursor = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'black\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Ccircle cx=\'12\' cy=\'12\' r=\'10\'/%3E%3Cline x1=\'8\' y1=\'12\' x2=\'16\' y2=\'12\'/%3E%3C/svg%3E") 12 12, auto';
+        } else if (isHighlighting) {
+            canvas.style.cursor = 'url("data:image/svg+xml,...") 0 24, auto';
+        } else {
+            canvas.style.cursor = 'default';
+        }
+    }
+
+    function toggleStickyNotes() {
+        areStickyNotesVisible = !areStickyNotesVisible;
+        toggleStickyNotesBtn.classList.toggle('active', areStickyNotesVisible);
+        renderStickyNotes();
+    }
+
+    function togglePen() {
+        setActiveTool('pen');
+    }
+
+    function toggleHighlighter() {
+        setActiveTool('highlighter');
+    }
+
+    function toggleEraser() {
+        setActiveTool('eraser');
+    }
+
+    function debounce(func, wait) {
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(saveTimeout);
+                func(...args);
+            };
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(later, wait);
+        };
+    }
+
+    // Function to save whiteboards to IndexedDB
+    function saveWhiteboardsToIndexedDB() {
+        if (!db) return;
+
+        const transaction = db.transaction(['whiteboards'], 'readwrite');
+        const store = transaction.objectStore('whiteboards');
+
+        // Clear existing data
+        store.clear();
+
+        // Save each whiteboard
+        whiteboards.forEach((board, index) => {
+            store.put({id: index, data: board});
+        });
+
+        transaction.oncomplete = function () {
+            console.log('All whiteboards saved successfully');
+        };
+
+        transaction.onerror = function (event) {
+            console.error('Error saving whiteboards:', event.target.error);
+        };
+    }
+
+    const debouncedSave = debounce(saveWhiteboardsToIndexedDB, 1000);
+
+    // Function to load whiteboards from IndexedDB
+    function loadWhiteboardsFromIndexedDB() {
+        if (!db) return;
+
+        const transaction = db.transaction(['whiteboards'], 'readonly');
+        const store = transaction.objectStore('whiteboards');
+        const request = store.getAll();
+
+        request.onsuccess = function (event) {
+            const savedWhiteboards = event.target.result;
+            if (savedWhiteboards.length > 0) {
+                whiteboards = savedWhiteboards.map(item => ({stickyNotes: [], ...item.data}));
+                currentBoardIndex = 0;
+                loadCurrentBoard();
+                updateBoardInfo();
+            }
+        };
+
+        request.onerror = function (event) {
+            console.error('Error loading whiteboards:', event.target.error);
+        };
+    }
+
+    function resizeCanvas() {
+        const scaleX = canvasContainer.clientWidth / canvas.width;
+        const scaleY = canvasContainer.clientHeight / canvas.height;
+        const scale = Math.min(scaleX, scaleY);
+
+        if (rotationDegrees === 0) {
+            canvasContainer.style.transform = 'none';
+            canvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        } else {
+            canvasContainer.style.transform = `rotate(${rotationDegrees}deg)`;
+            canvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        }
+
+        // Recalculate canvasCenterY
+        const canvasRect = canvas.getBoundingClientRect();
+        canvasCenterY = canvasRect.top + canvasRect.height / 2;
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        if (isGridVisible) {
+            updateGrid();
+        }
+        renderStickyNotes();
+    }
+
+    function calculateAngle(x1, y1, x2, y2) {
+        return Math.atan2(y2 - y1, x2 - x1);
+    }
+
+    function getCanvasXY(event) {
+        const mouseX = event.offsetX;
+        const mouseY = event.offsetY;
+
+        if (Math.trunc(rotationDegrees) === 0) {
+            return [mouseX, mouseY]
+        }
+
+        // Get the current transformation matrix
+        const matrix = ctx.getTransform();
+
+        // Invert the transformation matrix to undo the rotation
+        const inverseMatrix = matrix.invertSelf();
+
+        // Use DOMPoint to apply the inverse transformation to the mouse coordinates
+        const point = new DOMPoint(mouseX, mouseY);
+        const transformedPoint = inverseMatrix.transformPoint(point);
+        return [transformedPoint.x, transformedPoint.y];
+    }
+
+    function duplicateWhiteboard() {
+        const currentBoard = whiteboards[currentBoardIndex];
+        const newBoard = {
+            name: `${currentBoard.name} (Copy)`,
+            data: currentBoard.data,
+            history: []  // Start with an empty history for the new board
+        };
+
+        // Insert the new board right after the current one
+        whiteboards.splice(currentBoardIndex + 1, 0, newBoard);
+
+        renameWhiteboards();
+
+        // Switch to the new board
+        currentBoardIndex++;
+
+        // Update the UI
+        loadCurrentBoard();
+        updateBoardInfo();
+        saveWhiteboardsToIndexedDB();
+        if (isOverviewVisible) {
+            updateOverviewGrid();
+        }
+    }
+
+    function startDrawing(e) {
+        isDrawing = true;
+        [lastX, lastY] = getCanvasXY(e);
+        shiftStartX = lastX;
+        shiftStartY = lastY;
+        shiftConstrainedDirection = null;
+        if (whiteboards[currentBoardIndex].history.length >= 5) {
+            whiteboards[currentBoardIndex].history.shift(); // Remove the oldest state
+        }
+        whiteboards[currentBoardIndex].history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+
+        // Check if Ctrl is pressed and enable highlighting
+        if (isCtrlPressed && currentTool !== 'highlighter') {
+            isTemporaryHighlighter = true;
+            setActiveTool('highlighter');
+        }
+    }
+
+    function undo() {
+        if (whiteboards[currentBoardIndex].history.length > 0) {
+            const previousState = whiteboards[currentBoardIndex].history.pop();
+            ctx.putImageData(previousState, 0, 0);
+            saveCurrentBoard();
+        }
+    }
+
+    function drawLine(ctx, lastX, lastY, newX, newY, startWidth, endWidth) {
+        const steps = 8;
+
+        for (let i = 0; i < steps; i++) {
+            const t = i / (steps - 1);
+            const x = lastX + (newX - lastX) * t;
+            const y = lastY + (newY - lastY) * t;
+            const width = startWidth + (endWidth - startWidth) * t;
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+
+            for (let i = 0; i < steps; i++) {
+                const t = (i + 1) / steps;
+                const x = lastX + (newX - lastX) * t;
+                const y = lastY + (newY - lastY) * t;
+                const width = startWidth + (endWidth - startWidth) * t;
+
+                ctx.lineTo(x, y);
+                ctx.lineWidth = width;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+            }
+        }
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+
+        const newBrushSize = (brushSize.value < 4) ? brushSize.value : brushSize.value * (lastPressure < 0.10 ? 0.10 : lastPressure);
+
+        ctx.lineWidth = newBrushSize;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        switch (currentTool) {
+            case 'eraser':
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.lineWidth = 20;
+                break;
+            case 'highlighter':
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.strokeStyle = 'rgba(255, 255, 0, 0.3)';
+                ctx.lineWidth = 50;
+                break;
+            case 'pen':
+            default:
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = colorPicker.value;
+                break;
+        }
+
+        let [newX, newY] = getCanvasXY(e);
+
+        if (isShiftPressed) {
+            if (!shiftConstrainedDirection) {
+                // Determine the initial direction
+                const dx = Math.abs(newX - shiftStartX);
+                const dy = Math.abs(newY - shiftStartY);
+                if (dx * dy > 25) {
+                    shiftConstrainedDirection = dx > dy ? 'horizontal' : 'vertical';
+                }
+            }
+
+            if (shiftConstrainedDirection === 'horizontal') {
+                newY = shiftStartY; // Keep Y constant
+            } else {
+                newX = shiftStartX; // Keep X constant
+            }
+        } else {
+            shiftStartX = newX;
+            shiftStartY = newY;
+        }
+
+        ctx.beginPath();
+
+        if (brushSize.value > 4 && newBrushSize / lastBrushSize < 0.7) {
+            drawLine(ctx, lastX, lastY, newX, newY, lastBrushSize, newBrushSize);
+        } else {
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(newX, newY);
+        }
+        ctx.stroke();
+
+        [lastX, lastY] = [newX, newY];
+        saveCurrentBoard();
+        lastBrushSize = newBrushSize;
+    }
+
+    function stopDrawing() {
+        if (isDrawing) {
+            isDrawing = false;
+            shiftConstrainedDirection = null;
+            shiftStartX = null;
+            shiftStartY = null;
+            saveCurrentBoard();
+
+            // Reset to pen if it was temporarily set to highlighter
+            if (isTemporaryHighlighter) {
+                isTemporaryHighlighter = false;
+                setActiveTool('pen');
+            }
+        }
+        isShiftPressed = false;
+        shiftConstrainedDirection = null;
+    }
+
+    function showErrorDialog(message) {
+        errorMessage.textContent = message;
+        errorDialog.style.display = 'block';
+    }
+
+    function showConfirmDialog() {
+        showDialog('confirmDialog')
+    }
+
+    function hideConfirmDialog() {
+        hideDialog('confirmDialog')
+    }
+
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        whiteboards[currentBoardIndex].data = null;
+        whiteboards[currentBoardIndex].history = [];
+        saveCurrentBoard();
+    }
+
+    function createNewBoard() {
+        saveCurrentBoard();
+        const newBoardIndex = whiteboards.length;
+        whiteboards.push({name: 'Whiteboard', title: 'Whiteboard', data: null, history: [], stickyNotes: []});
+        currentBoardIndex = newBoardIndex;
+        clearCanvas();
+        updateBoardInfo();
+        saveWhiteboardsToIndexedDB();
+        if (isOverviewVisible) {
+            updateOverviewGrid();
+        }
+    }
+
+    function saveCurrentBoard() {
+        whiteboards[currentBoardIndex].data = canvas.toDataURL();
+
+        debouncedSave();
+
+        if (isOverviewVisible) {
+            updateOverviewGrid();
+        }
+        updateStickyNotesMenu();
+    }
+
+    function loadBoard(index) {
+        if (index !== currentBoardIndex) {
+            saveCurrentBoard();
+            currentBoardIndex = index;
+            loadCurrentBoard();
+            updateBoardInfo();
+            // Clear the undo history when switching boards
+            whiteboards[currentBoardIndex].history = [];
+        }
+        updateStickyNotesMenu();
+    }
+
+    function forceLoadBoard(index) {
+        saveCurrentBoard();
+        currentBoardIndex = index;
+        loadCurrentBoard();
+        updateBoardInfo();
+        // Clear the undo history when switching boards
+        whiteboards[currentBoardIndex].history = [];
+        updateStickyNotesMenu();
+    }
+
+    function createStickyNote(x, y) {
+        if (!areStickyNotesVisible) {
+            return;
+        }
+        const scale = getCanvasScale();
+        const note = {
+            id: Date.now(),
+            x: x / scale,
+            y: y / scale,
+            text: 'New note',
+            color: getRandomPastelColor()
+        };
+        whiteboards[currentBoardIndex].stickyNotes.push(note);
+        renderStickyNotes();
+        saveCurrentBoard();
+
+        setTimeout(() => {
+            const noteElement = document.querySelector(`.sticky-note[data-id="${note.id}"]`);
+            if (noteElement) {
+                const textarea = noteElement.querySelector('.note-content');
+                textarea.focus();
+                textarea.select();
+            }
+        }, 0);
+        updateStickyNotesMenu();
+    }
+
+
+    function getRandomPastelColor() {
+        const hue = Math.floor(Math.random() * 360);
+        return `hsl(${hue}, 100%, 85%)`;
+    }
+
+    function renderStickyNotes() {
+        stickyNotesContainer.innerHTML = '';
+        if (!areStickyNotesVisible) {
+            return;
+        }
+        const scale = getCanvasScale();
+        whiteboards[currentBoardIndex].stickyNotes.forEach(note => {
+            const noteElement = document.createElement('div');
+            noteElement.className = 'sticky-note';
+            noteElement.dataset.id = note.id;
+            noteElement.style.left = `${note.x * scale}px`;
+            noteElement.style.top = `${note.y * scale}px`;
+            noteElement.style.width = `200px`;
+            noteElement.style.height = `150px`;
+            noteElement.style.backgroundColor = note.color;
+            noteElement.innerHTML = `
+            <div class="note-header">
+                <div class="drag-handle">&#9776;</div>
+                <button class="delete-note">×</button>
+            </div>
+            <textarea class="note-content">${note.text}</textarea>
+        `;
+            stickyNotesContainer.appendChild(noteElement);
+
+            makeStickyNoteDraggable(noteElement, note);
+
+            noteElement.querySelector('.delete-note').addEventListener('click', () => deleteStickyNote(note.id));
+            noteElement.querySelector('.note-content').addEventListener('input', (e) => updateStickyNoteText(note.id, e.target.value));
+        });
+    }
+
+    function makeStickyNoteDraggable(noteElement, note) {
+        let isDragging = false;
+        let startX, startY;
+
+        noteElement.querySelector('.drag-handle').addEventListener('mousedown', (e) => {
+            isDragging = true;
+            const scale = getCanvasScale();
+            startX = e.clientX - note.x * scale;
+            startY = e.clientY - note.y * scale;
+            noteElement.style.zIndex = getHighestZIndex() + 1;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const scale = getCanvasScale();
+                note.x = (e.clientX - startX) / scale;
+                note.y = (e.clientY - startY) / scale;
+                noteElement.style.left = `${note.x * scale}px`;
+                noteElement.style.top = `${note.y * scale}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                saveCurrentBoard();
+            }
+        });
+    }
+
+    function getHighestZIndex() {
+        return Math.max(
+            ...Array.from(document.querySelectorAll('.sticky-note'))
+                .map(el => parseInt(getComputedStyle(el).zIndex) || 0)
+        );
+    }
+
+    function deleteStickyNote(id) {
+        whiteboards[currentBoardIndex].stickyNotes = whiteboards[currentBoardIndex].stickyNotes.filter(note => note.id !== id);
+        renderStickyNotes();
+        saveCurrentBoard();
+        updateStickyNotesMenu();
+    }
+
+    function updateStickyNoteText(id, text) {
+        const note = whiteboards[currentBoardIndex].stickyNotes.find(note => note.id === id);
+        if (note) {
+            note.text = text;
+            saveCurrentBoard();
+        }
+        updateStickyNotesMenu();
+    }
+
+    function loadCurrentBoard() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'source-over';  // Reset to default
+        if (whiteboards[currentBoardIndex].data) {
+            const img = new Image();
+            img.onload = function () {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.onerror = function () {
+                console.error('Failed to load image');
+            }
+            img.src = whiteboards[currentBoardIndex].data;
+            renderStickyNotes();
+        }
+        // Reset eraser state
+        isErasing = false;
+        eraserBtn.classList.remove('active');
+        canvas.style.cursor = 'default';
+
+        // Clear the undo history
+        whiteboards[currentBoardIndex].history = [];
+        updateStickyNotesButtonVisibility();
+    }
+
+    function updateBoardInfo() {
+        const currentBoard = whiteboards[currentBoardIndex];
+        boardInfo.textContent = `${currentBoard.title || 'Whiteboard'} ${currentBoardIndex + 1} / ${whiteboards.length}`;
+        prevBtn.disabled = currentBoardIndex === 0;
+        nextBtn.disabled = currentBoardIndex === whiteboards.length - 1;
+    }
+
+    function navigateBoards(direction) {
+        const newIndex = currentBoardIndex + direction;
+        if (newIndex >= 0 && newIndex < whiteboards.length) {
+            loadBoard(newIndex);
+        }
+    }
+
+    function saveAsPNG() {
+        const link = document.createElement('a');
+        link.download = `${whiteboards[currentBoardIndex].name}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    function saveAllPNGs() {
+        closeFileMenu();
+
+        // Create a zip file containing all PNGs
+        const zip = new JSZip();
+
+        // Counter for successful saves
+        let savedCount = 0;
+
+        // Save current canvas state
+        const currentIndex = currentBoardIndex;
+        const currentData = canvas.toDataURL();
+
+        // Process each whiteboard
+        whiteboards.forEach((board, index) => {
+            // Create a sanitized filename
+            const paddedNumber = String(index + 1).padStart(2, '0');
+            const sanitizedTitle = (board.title || 'Whiteboard').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+            const filename = `${paddedNumber}-${sanitizedTitle}.png`;
+
+            if (board.data) {
+                // Convert data URL to blob
+                const imageData = board.data.split(',')[1];
+                zip.file(filename, imageData, {base64: true});
+                savedCount++;
+            } else {
+                // For empty whiteboards, create a blank PNG
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.fillStyle = 'white';
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+                // Convert blank canvas to blob
+                const blankData = tempCanvas.toDataURL('image/png').split(',')[1];
+                zip.file(filename, blankData, {base64: true});
+                savedCount++;
+            }
+        });
+
+        // Generate and download the zip file
+        zip.generateAsync({type: "blob"})
+            .then(function(content) {
+                const url = URL.createObjectURL(content);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'all_whiteboards.zip';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            })
+            .catch(function(error) {
+                console.error('Error creating zip file:', error);
+                showErrorDialog('Failed to create zip file. Please try again.');
+            });
+    }
+
+    function saveAsPDF() {
+        closeFileMenu()
+        const {jsPDF} = window.jspdf;
+        const doc = new jsPDF('l', 'px', [canvas.width, canvas.height]);
+
+        // Function to optimize PNG image
+        function optimizePNG(src) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = this.width;
+                    canvas.height = this.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(this, 0, 0);
+                    // You can adjust the quality (0-1) if needed, but for PNGs it mainly affects compression level
+                    resolve(canvas.toDataURL('image/png', 0.8));
+                };
+                img.src = src;
+            });
+        }
+
+        // Function to add a single whiteboard to the PDF
+        async function addWhiteboardToPDF(index) {
+            const board = whiteboards[index];
+
+            if (index > 0) {
+                doc.addPage();
+            }
+
+            if (board.data) {
+                const optimizedImage = await optimizePNG(board.data);
+                doc.addImage(optimizedImage, 'PNG', 0, 0, canvas.width, canvas.height, null, 'FAST');
+            } else {
+                // If the board is blank, add a white background
+                doc.setFillColor(255, 255, 255);
+                doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), 'F');
+            }
+
+            doc.setFontSize(20);
+            doc.setTextColor(0, 0, 0);  // Ensure text is black
+            doc.text(board.name + (board.data ? '' : ' (Blank)'), 20, 30);
+        }
+
+        // Use async/await to ensure whiteboards are added sequentially
+        async function generatePDF() {
+            for (let i = 0; i < whiteboards.length; i++) {
+                await addWhiteboardToPDF(i);
+            }
+            doc.save('all_whiteboards.pdf', {compress: true});
+        }
+
+        generatePDF();
+    }
+
+    function getCanvasScale() {
+        const scaleX = canvasContainer.clientWidth / canvas.width;
+        const scaleY = canvasContainer.clientHeight / canvas.height;
+        return Math.min(scaleX, scaleY);
+    }
+
+    function copyCurrentWhiteboard() {
+        canvas.toBlob(function (blob) {
+            const item = new ClipboardItem({"image/png": blob});
+            navigator.clipboard.write([item]).then(function () {
+            }, function (err) {
+                console.error("Could not copy image: ", err);
+            });
+        });
+    }
+
+    function handleKeyboardShortcuts(e) {
+        if (document.activeElement === brushSizeDisplay || document.activeElement?.className === 'note-content' || document.activeElement === boardTitleInput) {
+            return; // Exit the function if we're typing in the brush size input
+        }
+
+        if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+            e.preventDefault(); // Prevent the browser's default undo behavior
+            undo();
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+            e.preventDefault(); // Prevent the browser's default copy behavior
+            copyCurrentWhiteboard();
+        }
+    }
+
+    function handlePaste(e) {
+        if (document.activeElement === brushSizeDisplay || document.activeElement?.className === 'note-content') {
+            return; // Exit the function if we're typing in the brush size input
+        }
+
+        e.preventDefault();
+        const items = e.clipboardData.items;
+
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                loadImageToCanvas(blob);
+                return;
+            }
+        }
+
+        showErrorDialog('No image found in clipboard. Please copy an image and try again.');
+    }
+
+    function handlePointerEvent(event) {
+        if (event.pointerType === 'pen') {
+            lastPressure = event.pressure;
+            if (event.button === 5) {
+                setActiveTool('eraser');
+            } else if (event.button === 0 && currentTool === 'eraser') {
+                setActiveTool('pen');
+            }
+        }
+    }
+
+    function drawGrid() {
+        const canvas = document.createElement('canvas');
+        canvas.style.background = 'white';
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+
+        const cellWidth = canvas.width / GRID_COLUMNS;
+        const cellHeight = canvas.height / GRID_ROWS;
+        const gutterSize = Math.min(cellWidth, cellHeight) * (GUTTER_PERCENTAGE / 100);
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.lineWidth = 1;
+
+        // Draw vertical lines
+        for (let i = 1; i < GRID_COLUMNS; i++) {
+            const x = i * cellWidth;
+            ctx.beginPath();
+            ctx.moveTo(x - gutterSize / 2, 0);
+            ctx.lineTo(x - gutterSize / 2, canvas.height);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x - cellWidth / 2, 0);
+            ctx.lineTo(x - cellWidth / 2, canvas.height);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x + gutterSize / 2, 0);
+            ctx.lineTo(x + gutterSize / 2, canvas.height);
+            ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(GRID_COLUMNS * cellWidth - cellWidth / 2, 0);
+        ctx.lineTo(GRID_COLUMNS * cellWidth - cellWidth / 2, canvas.height);
+        ctx.stroke();
+
+        // Draw horizontal lines
+        for (let i = 1; i < GRID_ROWS; i++) {
+            const y = i * cellHeight;
+            ctx.beginPath();
+            ctx.moveTo(0, y - gutterSize / 2);
+            ctx.lineTo(canvas.width, y - gutterSize / 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(0, y - cellHeight / 2);
+            ctx.lineTo(canvas.width, y - cellHeight / 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(0, y + gutterSize / 2);
+            ctx.lineTo(canvas.width, y + gutterSize / 2);
+            ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(0, GRID_ROWS * cellHeight - cellHeight / 2);
+        ctx.lineTo(canvas.width, GRID_ROWS * cellHeight - cellHeight / 2);
+        ctx.stroke();
+
+        return canvas;
+    }
+
+    function updateGrid() {
+        const existingGrid = document.getElementById('grid');
+        if (existingGrid) {
+            existingGrid.remove();
+        }
+
+        const gridCanvas = drawGrid();
+        gridCanvas.id = 'grid';
+        gridCanvas.style.position = 'absolute';
+        gridCanvas.style.top = '0';
+        gridCanvas.style.left = '0';
+        gridCanvas.style.pointerEvents = 'none';
+        gridCanvas.style.zIndex = '-1';
+        canvasContainer.appendChild(gridCanvas);
+    }
+
+    function toggleGrid() {
+        isGridVisible = !isGridVisible;
+        const grid = document.getElementById('grid');
+        if (grid) {
+            grid.style.display = isGridVisible ? 'block' : 'none';
+        } else if (isGridVisible) {
+            updateGrid();
+        }
+        gridBtn.classList.toggle('active', isGridVisible);
+    }
+
+    function updateBrushSizeDisplay() {
+        brushSizeDisplay.value = brushSize.value;
+        lastBrushSize = brushSize.value
+    }
+
+    function updateBrushSizeSlider() {
+        let value = parseFloat(brushSizeDisplay.value);
+        if (isNaN(value) || value < 2) {
+            value = 2;
+        } else if (value > 50) {
+            value = 50;
+        }
+        brushSize.value = value;
+        brushSizeDisplay.value = value;
+    }
+
+    function toggleOverview() {
+        isOverviewVisible = !isOverviewVisible;
+        overviewContainer.style.display = 'block';
+        setTimeout(() => {
+            overviewContainer.classList.toggle('visible', isOverviewVisible);
+        }, 10);
+        overviewBtn.classList.toggle('active', isOverviewVisible);
+        if (isOverviewVisible) {
+            updateOverviewGrid();
+            // Add click event listener to the overviewContainer
+            overviewContainer.addEventListener('click', handleOverviewClick);
+        } else {
+            // Remove click event listener when hiding the overview
+            overviewContainer.removeEventListener('click', handleOverviewClick);
+            setTimeout(() => {
+                overviewContainer.style.display = 'none';
+            }, 500);
+        }
+    }
+
+    function toggleInvertColors() {
+        document.body.classList.toggle('inverted');
+        invertBtn.classList.toggle('active');
+    }
+
+    function updateOverviewGrid() {
+        overviewGrid.innerHTML = '';
+        whiteboards.forEach((board, index) => {
+            const item = document.createElement('div');
+            item.className = 'overviewItem';
+            item.id = `overviewItem-${index}`;
+            item.dataset.index = index;
+
+            let thumbnailContent;
+            if (board.data) {
+                thumbnailContent = `<img src="${board.data}" alt="${board.title}" class="overviewImage">`;
+            } else {
+                thumbnailContent = `<div class="overviewImage blankThumbnail">Blank Whiteboard</div>`;
+            }
+
+            item.innerHTML = `
+            ${thumbnailContent}
+            <span class="overviewName">${board.title || 'Whiteboard'} ${index + 1}/${whiteboards.length}</span>
+            <button class="removeWhiteboardBtn" title="Remove Whiteboard">×</button>
+            <div class="insert-indicator left"></div>
+            <div class="insert-indicator right"></div>
+        `;
+
+            const removeBtn = item.querySelector('.removeWhiteboardBtn');
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeWhiteboard(index);
+            });
+
+            // item.addEventListener('click', (e) => {
+            item.onclick = (e) => {
+                e.stopPropagation();
+                loadBoard(index);
+                toggleOverview();
+            };
+            // });
+
+            makeDraggable(item);
+            overviewGrid.appendChild(item);
+        });
+
+        // Ensure the current board is visually indicated
+        const currentItem = overviewGrid.children[currentBoardIndex];
+        if (currentItem) {
+            currentItem.classList.add('current-board');
+        }
+    }
+
+    function renameWhiteboards() {
+        whiteboards.forEach((board, index) => {
+            if (board.title === 'Whiteboard') {
+                board.name = 'Whiteboard';
+            } else {
+                board.name = board.title;
+            }
+        });
+    }
+
+    function removeWhiteboard(index) {
+        const removeWhiteboardMessage = document.getElementById('removeWhiteboardMessage');
+        removeWhiteboardMessage.textContent = `Are you sure you want to remove ${whiteboards[index].name}?`;
+
+        showDialog('removeWhiteboardDialog');
+
+        document.getElementById('removeWhiteboardYes').onclick = function () {
+            whiteboards.splice(index, 1);
+
+            if (whiteboards.length === 0) {
+                whiteboards.push({name: 'Whiteboard 1', data: null, history: []});
+            }
+
+            currentBoardIndex = Math.min(index, whiteboards.length - 1);
+            renameWhiteboards();
+            loadCurrentBoard();
+            updateOverviewGrid();
+            updateBoardInfo();
+            saveWhiteboardsToIndexedDB();
+            hideDialog('removeWhiteboardDialog');
+        };
+
+        document.getElementById('removeWhiteboardNo').onclick = function () {
+            hideDialog('removeWhiteboardDialog');
+        };
+    }
+
+    function handleKeyPress(event) {
+        if (document.activeElement === brushSizeDisplay || document.activeElement?.className === 'note-content' || document.activeElement === boardTitleInput) {
+            return; // Exit the function if we're typing in the brush size input
+        }
+
+        if (event.key === 'Alt') {
+            isAltPressed = true;
+            canvas.style.cursor = 'move';
+        }
+
+        if (event.key === 'Control') {
+            isCtrlPressed = true;
+        }
+
+        if (event.key === 'Shift' && !isShiftPressed) {
+            isShiftPressed = true;
+            if (isDrawing) {
+                shiftStartX = lastX;
+                shiftStartY = lastY;
+            }
+        }
+
+        if (event.key === 'Escape' && isOverviewVisible) {
+            event.preventDefault(); // Prevent default Escape behavior
+            toggleOverview();
+        }
+        if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            navigateBoards(-1);
+        }
+        if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            navigateBoards(1);
+        }
+
+        // Handle Cmd/Ctrl + S
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+            event.preventDefault(); // Prevent browser's default save
+            exportDatabase();
+            return;
+        }
+
+        // Handle Cmd/Ctrl + O (Open)
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'o') {
+            event.preventDefault(); // Prevent browser's default open
+            handleImportFile();
+            return;
+        }
+
+        // New code to handle numeric key presses
+        const numKey = parseInt(event.key);
+        if (!isNaN(numKey) && numKey >= 0 && numKey <= 4) {
+            event.preventDefault();
+            const newSize = [2, 8, 16, 30, 50][numKey];
+            brushSize.value = newSize;
+            brushSizeDisplay.value = newSize;
+            updateBrushSizeDisplay();
+        }
+
+        switch (event.key.toUpperCase()) {
+            case 'P':
+                setActiveTool('pen');
+                break;
+            case 'H':
+                setActiveTool('highlighter');
+                break;
+            case 'E':
+                setActiveTool('eraser');
+                break;
+            case 'X':
+                toggleGrid();
+                break;
+            case 'R':
+                setColor('#FF0000'); // Red
+                break;
+            case 'G':
+                setColor('#00AA00'); // Green
+                break;
+            case 'B':
+                setColor('#0000FF'); // Blue
+                break;
+            case 'M':
+                setColor('#000000'); // Black (Monochrome)
+                break;
+            case 'I':
+                toggleInvertColors();
+                break;
+        }
+    }
+
+    function setColor(color) {
+        colorPicker.value = color;
+    }
+
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable fullscreen mode: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+
+    function updateFullscreenButton() {
+        if (document.fullscreenElement) {
+            fullscreenBtn.innerHTML = `
+                     <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                         <path d="M4 14h6m0 0v6m0-6l-7 7m17-11h-6m0 0V4m0 6l7-7"></path>
+                     </svg>
+                 `;
+            fullscreenBtn.title = "Exit Fullscreen";
+        } else {
+            fullscreenBtn.innerHTML = `
+                     <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                     </svg>
+                 `;
+            fullscreenBtn.title = "Enter Fullscreen";
+        }
+    }
+
+    function handleOverviewClick(event) {
+        // Check if the click is directly on the overviewContainer (not on a thumbnail)
+        if (event.target === overviewContainer) {
+            toggleOverview();
+        }
+    }
+
+    function showDialog(dialogId) {
+        document.getElementById(dialogId).style.display = 'block';
+    }
+
+    function hideDialog(dialogId) {
+        document.getElementById(dialogId).style.display = 'none';
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+
+        const rect = this.getBoundingClientRect();
+        const midX = rect.left + rect.width / 2;
+
+        // Remove indicators from all items
+        document.querySelectorAll('.overviewItem').forEach(item => {
+            item.classList.remove('insert-left', 'insert-right');
+        });
+
+        // Add indicator to current item
+        if (e.clientX < midX) {
+            this.classList.add('insert-left');
+        } else {
+            this.classList.add('insert-right');
+        }
+
+        return false;
+    }
+
+    function handleDrop(e) {
+        if (isOverviewVisible) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIndex = parseInt(this.dataset.index);
+
+            if (fromIndex !== toIndex) {
+                const rect = this.getBoundingClientRect();
+                const midX = rect.left + rect.width / 2;
+                const insertAfter = e.clientX >= midX;
+
+                // Remove the dragged item
+                const [removed] = whiteboards.splice(fromIndex, 1);
+
+                // Calculate the new index
+                let newIndex = insertAfter ? toIndex + 1 : toIndex;
+                if (fromIndex < toIndex) {
+                    newIndex--;
+                }
+                newIndex = Math.max(0, Math.min(newIndex, whiteboards.length));
+
+                // Insert the item at the new position
+                whiteboards.splice(newIndex, 0, removed);
+
+                // Update currentBoardIndex if necessary
+                if (currentBoardIndex === fromIndex) {
+                    currentBoardIndex = newIndex;
+                } else if (fromIndex < currentBoardIndex && newIndex >= currentBoardIndex) {
+                    currentBoardIndex--;
+                } else if (fromIndex > currentBoardIndex && newIndex <= currentBoardIndex) {
+                    currentBoardIndex++;
+                }
+
+                renameWhiteboards();
+
+                if (draggedThing && draggedThing !== this) {
+                    animateReorder(draggedThing, this, insertAfter);
+                    draggedThing = null;
+                }
+
+
+                // Update the UI
+                updateBoardInfo();
+                saveWhiteboardsToIndexedDB();
+            }
+
+            // Remove all insertion indicators
+            document.querySelectorAll('.overviewItem').forEach(item => {
+                item.classList.remove('insert-left', 'insert-right', 'over');
+            });
+
+            return false;
+        }
+
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+
+        const files = e.dataTransfer.files;
+
+        if (files.length > 0) {
+            e.preventDefault();
+            const file = files[0];
+
+            if (file.type.startsWith('image/')) {
+                loadImageToCanvas(file);
+            } else {
+                showErrorDialog('Please drop an image file.');
+            }
+        } else if (this !== e.target) {
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIndex = parseInt(this.dataset.index);
+
+            // Reorder the whiteboards array
+            const [removed] = whiteboards.splice(fromIndex, 1);
+            whiteboards.splice(toIndex, 0, removed);
+
+            // Update currentBoardIndex if necessary
+            if (currentBoardIndex === fromIndex) {
+                currentBoardIndex = toIndex;
+            } else if (fromIndex < currentBoardIndex && toIndex >= currentBoardIndex) {
+                currentBoardIndex--;
+            } else if (fromIndex > currentBoardIndex && toIndex <= currentBoardIndex) {
+                currentBoardIndex++;
+            }
+
+            // Rename whiteboards and update the UI
+            renameWhiteboards();
+            updateOverviewGrid();
+            updateBoardInfo();
+            saveWhiteboardsToIndexedDB();
+        }
+
+        return false;
+    }
+
+    function animateReorder(draggedItem, droppedItem, insertAfter) {
+        const originalItemsRects = [...overviewGrid.children].map(e => e.getBoundingClientRect())
+        const originalItems = [...overviewGrid.children]
+        let wbs = Array.from(overviewGrid.children);
+
+        // Reorder the wbs array
+        const draggedIndex = wbs.indexOf(draggedItem);
+        let droppedIndex = wbs.indexOf(droppedItem);
+
+        if ((droppedIndex > draggedIndex) && !insertAfter) {
+            droppedIndex--;
+        } else if ((droppedIndex < draggedIndex) && insertAfter) {
+            droppedIndex++;
+        }
+
+        const newIndexPosition = (existingPosition) => {
+            let newPosition = existingPosition;
+            if (existingPosition === draggedIndex) {
+                newPosition = droppedIndex
+            } else {
+                if (droppedIndex > draggedIndex) {
+                    if (existingPosition >= draggedIndex && existingPosition <= droppedIndex) {
+                        newPosition = existingPosition - 1;
+                    }
+                } else {
+                    if (existingPosition >= droppedIndex && existingPosition <= draggedIndex) {
+                        newPosition = existingPosition + 1;
+                    }
+                }
+            }
+            return Math.max(0, Math.min(newPosition, whiteboards.length - 1));
+        }
+
+        wbs.splice(draggedIndex, 1);
+        wbs.splice(droppedIndex, 0, draggedItem);
+
+        // Update the DOM
+        wbs.forEach((whiteboard) => {
+            overviewGrid.appendChild(whiteboard);
+        });
+
+        // Invert positions by offsetting to old position
+        originalItems.forEach((whiteboard, index) => {
+            const startRect = originalItemsRects[index];
+            const newIndex = newIndexPosition(index);
+            const endRect = originalItemsRects[newIndex];
+
+            const deltaX = startRect.left - endRect.left;
+            const deltaY = startRect.top - endRect.top;
+
+            if (deltaX !== 0 || deltaY !== 0) {
+                if (index !== draggedIndex) {
+
+                    // Invert
+                    whiteboard.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                    whiteboard.style.transition = 'transform 0.3s ease-in-out';
+                }
+                const existingLabel = whiteboard.querySelector(".overviewName").innerHTML.trim()
+
+                const lastSpaceIndex = existingLabel.lastIndexOf(" ");
+                const result = existingLabel.substring(0, lastSpaceIndex);
+
+                whiteboard.querySelector(".overviewName").innerHTML = `${result} ${newIndex + 1}/${whiteboards.length}`
+                whiteboard.id = `overviewItem-${newIndex}`
+                whiteboard.dataset.index = newIndex;
+
+                // Update the onclick listener
+                whiteboard.onclick = (e) => {
+                    e.stopPropagation();
+                    forceLoadBoard(newIndex);
+                    toggleOverview();
+                };
+
+                // Update the remove button click listener
+                const removeBtn = whiteboard.querySelector('.removeWhiteboardBtn');
+                removeBtn.onclick = null;
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    removeWhiteboard(newIndex);
+                });
+
+            }
+        });
+
+        // Trigger reflow and remove translate so that they slide back to their new positions
+        originalItems.forEach(w => {
+            w.getBoundingClientRect();
+            w.style.transform = '';
+        })
+    }
+
+
+    function makeDraggable(item) {
+        item.draggable = true;
+        item.addEventListener('dragstart', handleDragStart, false);
+        item.addEventListener('dragenter', handleDragEnter, false);
+        item.addEventListener('dragover', handleDragOver, false);
+        item.addEventListener('dragleave', handleDragLeave, false);
+        item.addEventListener('drop', handleDrop, false);
+        item.addEventListener('dragend', handleDragEnd, false);
+    }
+
+    function handleDragEnd(e) {
+        this.style.opacity = '1';
+        this.classList.remove('dragging');
+        document.querySelectorAll('.overviewItem').forEach(item => {
+            item.classList.remove('insert-left', 'insert-right', 'over');
+        });
+    }
+
+    function handleDragLeave(e) {
+        this.classList.remove('over');
+    }
+
+    function handleDragEnter(e) {
+        const rect = this.getBoundingClientRect();
+        const midX = rect.left + rect.width / 2;
+
+        if (e.clientX < midX) {
+            this.classList.add('insert-left');
+            this.classList.remove('insert-right');
+        } else {
+            this.classList.add('insert-right');
+            this.classList.remove('insert-left');
+        }
+    }
+
+    let draggedThing = null;
+
+    function handleDragStart(e) {
+        this.style.opacity = '0.4';
+        this.classList.add('dragging');
+        draggedThing = this;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.dataset.index);
+
+        // Create a custom drag image
+        const dragImage = this.querySelector('.overviewImage').cloneNode(true);
+        dragImage.style.width = '150px';  // Set a fixed width for the drag image
+        dragImage.style.height = 'auto';  // Maintain aspect ratio
+        dragImage.style.opacity = '0.7';  // Make it slightly transparent
+
+        // Create a container for the drag image
+        const dragContainer = document.createElement('div');
+        dragContainer.appendChild(dragImage);
+        dragContainer.style.position = 'absolute';
+        dragContainer.style.top = '-1000px';  // Move it off-screen
+        document.body.appendChild(dragContainer);
+
+        // Set the custom drag image
+        e.dataTransfer.setDragImage(dragContainer, 50, 50);
+
+        // Remove the temporary drag image container after a short delay
+        setTimeout(() => {
+            document.body.removeChild(dragContainer);
+        }, 0);
+    }
+
+    function handleKeyUp(event) {
+        if (event.key === 'Alt') {
+            isAltPressed = false;
+            canvas.style.cursor = 'default';
+        }
+        if (event.key === 'Shift' && !isDrawing) {
+            isShiftPressed = false;
+            shiftConstrainedDirection = null;
+        }
+        if (event.key === 'Control') {
+            isCtrlPressed = false;
+        }
+    }
+
+    function loadImageToCanvas(blob) {
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            const img = new Image();
+            img.onerror = function () {
+                showErrorDialog('Error loading the image. Please try again with a different image.');
+            };
+            img.onload = function () {
+                // Clear the canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Calculate scaling to fit the image within the canvas
+                const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+                const x = (canvas.width / 2) - (img.width / 2) * scale;
+                const y = (canvas.height / 2) - (img.height / 2) * scale;
+
+                // Draw the image on the canvas
+                ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+
+                // Save the updated canvas
+                saveCurrentBoard();
+            };
+            img.src = event.target.result;
+        };
+
+        reader.readAsDataURL(blob);
+    }
+
+    function handleFileSelect() {
+        closeFileMenu()
+        const dataTransfer = new DataTransfer();
+        fileInput.files = dataTransfer.files;
+        fileInput.click();
+    }
+
+    function handleFileChange(e) {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            loadImageToCanvas(file);
+        } else {
+            showErrorDialog('Please select an image file.');
+        }
+    }
+
+    function setRotation(r) {
+        rotationDegrees = (r + 360) % 360; // This ensures the angle stays between 0 and 359
+        resetRotationBtn.disabled = rotationDegrees === 0;
+        resizeCanvas();
+    }
+
+    function rotateBy(by) {
+        setRotation(rotationDegrees + by);
+    }
+
+    function resetRotation() {
+        setRotation(0);
+    }
+
+    function handleMouseDown(event) {
+        if (isAltPressed) {
+            lastMouseX = event.clientX;
+            lastMouseY = event.clientY;
+        } else {
+            startDrawing(event);
+        }
+    }
+
+    function handleMouseMove(event) {
+        if (isAltPressed && event.buttons === 1) {
+            const canvasRect = canvas.getBoundingClientRect();
+            const canvasCenterX = canvasRect.left + canvasRect.width / 2;
+            const canvasCenterY = canvasRect.top + canvasRect.height / 2;
+
+            // Calculate angles from center to start and end points
+            const startAngle = calculateAngle(canvasCenterX, canvasCenterY, lastMouseX, lastMouseY);
+            const endAngle = calculateAngle(canvasCenterX, canvasCenterY, event.clientX, event.clientY);
+
+            // Calculate the angle difference
+            let angleDiff = endAngle - startAngle;
+
+            // Normalize the angle difference to be between -PI and PI
+            if (angleDiff > Math.PI) {
+                angleDiff -= 2 * Math.PI;
+            } else if (angleDiff < -Math.PI) {
+                angleDiff += 2 * Math.PI;
+            }
+
+            // Convert the angle from radians to degrees
+            const rotationAmount = angleDiff * (180 / Math.PI);
+
+            rotateBy(rotationAmount);
+            lastMouseX = event.clientX;
+            lastMouseY = event.clientY;
+        } else {
+            draw(event);
+        }
+    }
+
+    function handleMouseUp(event) {
+        if (!isAltPressed) {
+            stopDrawing();
+        }
+    }
+
+    function exportDatabase() {
+        closeFileMenu()
+        const transaction = db.transaction(['whiteboards'], 'readonly');
+        const store = transaction.objectStore('whiteboards');
+        const request = store.getAll();
+
+        request.onsuccess = function (event) {
+            const data = event.target.result;
+
+            // Filter out the history from each whiteboard
+            const filteredData = data.map(item => {
+                const {history, ...rest} = item.data;
+                return {...item, data: rest};
+            });
+
+            const jsonString = JSON.stringify(filteredData, null, 2);
+
+            const zip = new JSZip();
+            zip.file("whiteboard_data.json", jsonString);
+
+            zip.generateAsync({type: "blob"})
+                .then(function (content) {
+                    const url = URL.createObjectURL(content);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'whiteboard_database_export.zip';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                });
+        };
+
+        request.onerror = function (event) {
+            console.error('Error exporting database:', event.target.error);
+            showErrorDialog('Failed to export database. Please try again.');
+        };
+    }
+
+    function importDatabase(file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            JSZip.loadAsync(e.target.result)
+                .then(function (zip) {
+                    return zip.file("whiteboard_data.json").async("string");
+                })
+                .then(function (jsonString) {
+                    const importedData = JSON.parse(jsonString);
+
+                    const transaction = db.transaction(['whiteboards'], 'readwrite');
+                    const store = transaction.objectStore('whiteboards');
+
+                    // Clear existing data
+                    store.clear();
+
+                    // Import new data
+                    importedData.forEach((item, index) => {
+                        store.put({id: index, data: item.data});
+                    });
+
+                    transaction.oncomplete = function () {
+                        console.log('Database import completed successfully');
+                        // showErrorDialog('Database imported successfully. The page will now reload.');
+                        // setTimeout(() => location.reload(), 2000);
+                        location.reload()
+                    };
+
+                    transaction.onerror = function (event) {
+                        console.error('Error importing database:', event.target.error);
+                        showErrorDialog('Failed to import database. Please try again.');
+                    };
+                })
+                .catch(function (error) {
+                    console.error('Error reading ZIP file:', error);
+                    showErrorDialog('Failed to read the import file. Please make sure it\'s a valid ZIP file.');
+                });
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function closeFileMenu() {
+        fileMenu.style.display = 'none';
+    }
+
+    function toggleFileMenu(event) {
+        event.stopPropagation();
+        const rect = fileMenuBtn.getBoundingClientRect();
+
+        if (fileMenu.style.display === 'block') {
+            closeFileMenu();
+        } else {
+            fileMenu.style.display = 'block';
+
+            // Position the menu above the button
+            fileMenu.style.bottom = `${window.innerHeight - rect.top}px`;
+
+            // Align the right side of the menu with the right side of the button
+            fileMenu.style.right = `${window.innerWidth - rect.right}px`;
+
+            // Remove left positioning
+            fileMenu.style.left = 'auto';
+        }
+    }
+
+    function updateStickyNotesMenu() {
+        stickyNotesList.innerHTML = '';
+        whiteboards.forEach((board, boardIndex) => {
+            board.stickyNotes?.forEach((note, noteIndex) => {
+                const noteItem = document.createElement('div');
+                noteItem.className = 'sticky-note-item';
+                noteItem.innerHTML = `
+                <div class="sticky-note-content">${note.text.substring(0, 50)}${note.text.length > 50 ? '...' : ''}</div>
+                <div class="sticky-note-info">Whiteboard ${boardIndex + 1}</div>
+            `;
+                noteItem.addEventListener('click', () => {
+                    loadBoard(boardIndex);
+                    if (!areStickyNotesVisible) {
+                        toggleStickyNotes();
+                    }
+                    stickyNotesMenu.style.display = 'none';
+                    showStickyNotesMenuBtn.classList.remove('active');
+                });
+                stickyNotesList.appendChild(noteItem);
+            });
+        });
+        updateStickyNotesButtonVisibility();
+    }
+
+    function toggleStickyNotesMenu(event) {
+        event.stopPropagation();
+        const rect = showStickyNotesMenuBtn.getBoundingClientRect();
+
+        if (stickyNotesMenu.style.display === 'block') {
+            stickyNotesMenu.style.display = 'none';
+            showStickyNotesMenuBtn.classList.remove('active');
+        } else {
+            updateStickyNotesMenu();
+            stickyNotesMenu.style.display = 'block';
+            showStickyNotesMenuBtn.classList.add('active');
+
+            // Position the menu above the button
+            stickyNotesMenu.style.bottom = `${window.innerHeight - rect.top}px`;
+            stickyNotesMenu.style.right = `${window.innerWidth - rect.right}px`;
+            stickyNotesMenu.style.left = 'auto';
+        }
+    }
+
+    function updateStickyNotesButtonVisibility() {
+        const hasNotes = whiteboards.some(board => board.stickyNotes?.length > 0);
+        showStickyNotesMenuBtn.style.display = hasNotes ? 'block' : 'none';
+    }
+
+    function editBoardTitle() {
+        const currentBoard = whiteboards[currentBoardIndex];
+        boardInfo.style.display = 'none';
+        boardTitleInput.style.display = 'inline-block';
+        boardTitleInput.value = currentBoard.title || 'Whiteboard';
+        boardTitleInput.focus();
+        boardTitleInput.select();  // Add this line
+    }
+
+    function saveBoardTitle() {
+        const newTitle = boardTitleInput.value.trim();
+        if (newTitle) {
+            whiteboards[currentBoardIndex].title = newTitle;
+            whiteboards[currentBoardIndex].name = newTitle;
+        } else {
+            whiteboards[currentBoardIndex].title = 'Whiteboard';
+            whiteboards[currentBoardIndex].name = 'Whiteboard';
+        }
+        boardTitleInput.style.display = 'none';
+        boardInfo.style.display = 'inline-block';
+        updateBoardInfo();
+        saveWhiteboardsToIndexedDB();
+        if (isOverviewVisible) {
+            updateOverviewGrid();
+        }
+    }
+
+    function handleImportFile() {
+        document.getElementById('importFileInput').click();
+    }
+
+
+
+    document.addEventListener('click', (event) => {
+        if (!stickyNotesMenu.contains(event.target) && event.target !== showStickyNotesMenuBtn) {
+            stickyNotesMenu.style.display = 'none';
+            showStickyNotesMenuBtn.classList.remove('active');
+        }
+        if (!fileMenu.contains(event.target) && event.target !== fileMenuBtn) {
+            fileMenu.style.display = 'none';
+        }
+    });
+    resetRotationBtn.addEventListener('click', resetRotation);
+    fileInput.addEventListener('change', handleFileChange);
+    brushSize.addEventListener('input', updateBrushSizeDisplay);
+    brushSizeDisplay.addEventListener('change', updateBrushSizeSlider);
+    overviewBtn.addEventListener('click', toggleOverview);
+    gridBtn.addEventListener('click', toggleGrid);
+    window.addEventListener('resize', resizeCanvas);
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('mouseout', handleMouseUp);
+    penBtn.addEventListener('click', togglePen);
+    eraserBtn.addEventListener('click', toggleEraser);
+    highlighterBtn.addEventListener('click', toggleHighlighter);
+    clearBtn.addEventListener('click', () => showConfirmDialog());
+    confirmYes.addEventListener('click', () => {
+        clearCanvas();
+        hideConfirmDialog();
+    });
+    confirmNo.addEventListener('click', () => hideConfirmDialog());
+    errorOkBtn.addEventListener('click', () => hideDialog('errorDialog'));
+    newBoardBtn.addEventListener('click', createNewBoard);
+    prevBtn.addEventListener('click', () => navigateBoards(-1));
+    nextBtn.addEventListener('click', () => navigateBoards(1));
+    undoBtn.addEventListener('click', undo);
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+    window.addEventListener('load', loadWhiteboardsFromIndexedDB);
+    document.addEventListener('pointerdown', handlePointerEvent);
+    document.addEventListener('pointermove', handlePointerEvent);
+    document.addEventListener('pointerup', handlePointerEvent);
+    document.addEventListener('contextmenu', function (event) {
+        event.preventDefault();
+    });
+    document.addEventListener('keydown', handleKeyPress);
+    document.addEventListener('keyup', handleKeyUp);
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    document.addEventListener('fullscreenchange', updateFullscreenButton);
+    canvas.addEventListener('dragover', handleDragOver);
+    canvas.addEventListener('drop', handleDrop);
+    document.addEventListener('paste', handlePaste);
+    duplicateBtn.addEventListener('click', duplicateWhiteboard);
+    invertBtn.addEventListener('click', toggleInvertColors);
+    canvas.addEventListener('dblclick', (e) => {
+        if (!isDrawing && !isErasing) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            createStickyNote(x, y);
+            e.preventDefault();
+        }
+    });
+    toggleStickyNotesBtn.addEventListener('click', toggleStickyNotes);
+    importFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            importDatabase(e.target.files[0]);
+        }
+    });
+    fileMenuBtn.addEventListener('click', toggleFileMenu);
+    savePdfBtn.addEventListener('click', saveAsPDF);
+    savePngBtn.addEventListener('click', saveAsPNG);
+    saveAllPngsBtn.addEventListener('click', saveAllPNGs);
+    importPngBtn.addEventListener('click', handleFileSelect);
+    exportDbBtn.addEventListener('click', exportDatabase);
+    importDbBtn.addEventListener('click', handleImportFile);
+    showStickyNotesMenuBtn.addEventListener('click', toggleStickyNotesMenu);
+    boardInfo.addEventListener('click', editBoardTitle);
+    boardTitleInput.addEventListener('blur', saveBoardTitle);
+    boardTitleInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+            saveBoardTitle();
+        }
+    });
+    boardTitleInput.addEventListener('focus', function () {
+        this.select();
+    });
+
+
+    // Initial setup
+    setRotation(0)
+    updateBoardInfo();
+    updateBrushSizeDisplay();
+    setActiveTool('pen');
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            if (!/localhost|127\.0\.0\.1/.test(location.hostname)) {
+                navigator.serviceWorker.register('/utilities/multiboard-service-worker.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            }
+        });
+    }
+</script>
+</body>
+</html>
