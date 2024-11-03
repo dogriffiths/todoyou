@@ -47,28 +47,6 @@
             margin-right:auto
         }
 
-        .tabs {
-            -ms-overflow-style:none;
-            -webkit-overflow-scrolling:touch;
-            background:#f0f0f4;
-            border-bottom:1px solid #ccc;
-            box-sizing:border-box;
-            display:flex;
-            gap:2px;
-            height:40px;
-            margin-left:0;
-            margin-right:0;
-            max-width:100%;
-            overflow-x:auto;
-            overflow-y:hidden;
-            overscroll-behavior:none;
-            position:sticky;
-            scrollbar-width:none;
-            top:0;
-            width:100vw;
-            z-index:100
-        }
-
         .calendar-container {
             background:#fff;
             border-radius:8px;
@@ -333,6 +311,28 @@
             color:#fff
         }
 
+        .tabs {
+            -ms-overflow-style:none;
+            -webkit-overflow-scrolling:touch;
+            background:#f0f0f4;
+            border-bottom:1px solid #ccc;
+            box-sizing:border-box;
+            display:flex;
+            gap:2px;
+            height:40px;
+            margin-left:0;
+            margin-right:0;
+            max-width:100%;
+            overflow-x:auto;
+            overflow-y:hidden;
+            overscroll-behavior:none;
+            position:sticky;
+            scrollbar-width:none;
+            top:0;
+            width:100vw;
+            z-index:100
+        }
+
         .task-checkbox {
             margin-right:10px
         }
@@ -539,6 +539,22 @@
             }
         }
 
+        .autocomplete-container {
+            display:flex;
+            flex:1;
+            position:relative
+        }
+
+        .autocomplete-container input {
+            flex:1;
+            width:100%
+        }
+
+        .best-streak {
+            background:#e8f5e9;
+            color:#2e7d32
+        }
+
         .clear-filter {
             background:#666;
             border:none;
@@ -569,127 +585,6 @@
             cursor:pointer;
             min-width:150px;
             padding:6px
-        }
-
-        .data-button {
-            align-items:center;
-            background:#fff;
-            border:1px solid #ddd;
-            border-radius:4px;
-            color:#666;
-            cursor:pointer;
-            display:inline-flex;
-            font-size:.9em;
-            gap:6px;
-            padding:6px 12px;
-            transition:all .2s ease
-        }
-
-        .data-button svg {
-            height:16px;
-            width:16px
-        }
-
-        .data-button:hover {
-            background:#f0f0f0;
-            border-color:#ccc
-        }
-
-        .data-buttons {
-            display:flex;
-            gap:8px
-        }
-
-        .filter-container {
-            align-items:center;
-            display:flex;
-            gap:10px;
-            margin-bottom:15px
-        }
-
-        .kanban-column {
-            background:#f5f5f5;
-            border-radius:8px;
-            display:flex;
-            flex:1;
-            flex-direction:column;
-            min-width:300px;
-            padding:16px
-        }
-
-        .kanban-column-content {
-            flex:1;
-            min-height:100px
-        }
-
-        .kanban-column-header {
-            border-bottom:2px solid #ddd;
-            font-size:1.2em;
-            font-weight:700;
-            margin-bottom:16px;
-            padding-bottom:8px
-        }
-
-        .kanban-container {
-            display:flex;
-            gap:20px;
-            min-height:600px;
-            overflow-x:auto;
-            padding:20px
-        }
-
-        .kanban-placeholder {
-            border:2px dashed #ccc;
-            border-radius:4px;
-            height:80px;
-            margin-bottom:8px
-        }
-
-        .kanban-task {
-            background:#fff;
-            border-radius:4px;
-            box-shadow:0 1px 3px #0000001a;
-            cursor:move;
-            margin-bottom:8px;
-            padding:12px
-        }
-
-        .kanban-task-description {
-            color:#666;
-            font-size:.9em
-        }
-
-        .kanban-task-title {
-            font-weight:500;
-            margin-bottom:4px
-        }
-
-        .kanban-task:hover {
-            box-shadow:0 2px 5px #0003
-        }
-
-        .task-dot {
-            background:#4CAF50;
-            border-radius:50%;
-            height:6px;
-            margin:2px auto;
-            width:6px
-        }
-
-        .autocomplete-container {
-            display:flex;
-            flex:1;
-            position:relative
-        }
-
-        .autocomplete-container input {
-            flex:1;
-            width:100%
-        }
-
-        .best-streak {
-            background:#e8f5e9;
-            color:#2e7d32
         }
 
         .current-streak {
@@ -730,6 +625,42 @@
         .daily-habit-icon span {
             align-items:center;
             display:inline-flex
+        }
+
+        .data-button {
+            align-items:center;
+            background:#fff;
+            border:1px solid #ddd;
+            border-radius:4px;
+            color:#666;
+            cursor:pointer;
+            display:inline-flex;
+            font-size:.9em;
+            gap:6px;
+            padding:6px 12px;
+            transition:all .2s ease
+        }
+
+        .data-button svg {
+            height:16px;
+            width:16px
+        }
+
+        .data-button:hover {
+            background:#f0f0f0;
+            border-color:#ccc
+        }
+
+        .data-buttons {
+            display:flex;
+            gap:8px
+        }
+
+        .filter-container {
+            align-items:center;
+            display:flex;
+            gap:10px;
+            margin-bottom:15px
         }
 
         .form-group .daily-habit-label {
@@ -834,11 +765,82 @@
             margin-bottom:20px
         }
 
+        .kanban-column {
+            background:#f5f5f5;
+            border-radius:8px;
+            display:flex;
+            flex:1;
+            flex-direction:column;
+            min-width:300px;
+            padding:16px
+        }
+
+        .kanban-column-content {
+            flex:1;
+            min-height:100px
+        }
+
+        .kanban-column-header {
+            border-bottom:2px solid #ddd;
+            font-size:1.2em;
+            font-weight:700;
+            margin-bottom:16px;
+            padding-bottom:8px
+        }
+
+        .kanban-column.drag-over,.suggestion-item.selected {
+            background:#e8f5e9
+        }
+
+        .kanban-container {
+            display:flex;
+            gap:20px;
+            min-height:600px;
+            overflow-x:auto;
+            padding:20px
+        }
+
+        .kanban-placeholder {
+            border:2px dashed #ccc;
+            border-radius:4px;
+            height:80px;
+            margin-bottom:8px
+        }
+
+        .kanban-task {
+            background:#fff;
+            border-radius:4px;
+            box-shadow:0 1px 3px #0000001a;
+            cursor:move;
+            margin-bottom:8px;
+            padding:12px
+        }
+
+        .kanban-task-description {
+            color:#666;
+            font-size:.9em
+        }
+
+        .kanban-task-title {
+            font-weight:500;
+            margin-bottom:4px
+        }
+
+        .kanban-task:hover {
+            box-shadow:0 2px 5px #0003
+        }
+
         .no-habits {
             color:#666;
             font-style:italic;
             padding:20px;
             text-align:center
+        }
+
+        .sort-controls,.task-header,.streak-header {
+            align-items:center;
+            display:flex;
+            gap:8px
         }
 
         .sort-direction {
@@ -915,6 +917,14 @@
             flex-direction:column
         }
 
+        .task-dot {
+            background:#4CAF50;
+            border-radius:50%;
+            height:6px;
+            margin:2px auto;
+            width:6px
+        }
+
         .task-item {
             align-items:center;
             background:#fff;
@@ -932,16 +942,6 @@
             font-size:24px
         }
 
-        .kanban-column.drag-over,.suggestion-item.selected {
-            background:#e8f5e9
-        }
-
-        .sort-controls,.task-header,.streak-header {
-            align-items:center;
-            display:flex;
-            gap:8px
-        }
-
         @media (max-width: 768px) {
             .habit-item {
                 align-items:flex-start;
@@ -955,18 +955,28 @@
             }
         }
 
-        .save-button {
-            position:relative
+        .data-button {
+            align-items:center;
+            background:#fff;
+            border:1px solid #ddd;
+            border-radius:4px;
+            color:#666;
+            cursor:pointer;
+            display:inline-flex;
+            font-size:.9em;
+            gap:6px;
+            padding:6px 12px;
+            transition:all .2s ease
         }
 
-        [data-window-dirty="true"] .save-button {
-            background-color:#4CAF50;
-            box-shadow:0 0 0 2px #4caf504d;
-            color:#fff
+        .data-button svg {
+            height:16px;
+            width:16px
         }
 
-        [data-window-dirty="true"] .save-button svg {
-            color:#fff
+        .data-button:hover {
+            background:#f0f0f0;
+            border-color:#ccc
         }
 
         .floating-toolbar {
@@ -984,28 +994,66 @@
             z-index:101
         }
 
-        .data-button {
+        .save-button {
+            position:relative
+        }
+
+        .tab {
             align-items:center;
-            background:#fff;
-            border:1px solid #ddd;
-            border-radius:4px;
+            background:#e0e0e6;
+            border:none;
+            border-radius:8px 8px 0 0;
             color:#666;
             cursor:pointer;
-            display:inline-flex;
-            font-size:.9em;
-            gap:6px;
-            padding:6px 12px;
-            transition:all .2s ease
+            display:flex;
+            flex:1;
+            font-size:13px;
+            height:32px;
+            justify-content:center;
+            margin-left:1px;
+            max-width:200px;
+            min-width:100px;
+            padding:0 16px;
+            position:relative;
+            transition:background-color .2s;
+            white-space:nowrap
         }
 
-        .data-button:hover {
-            background:#f0f0f0;
-            border-color:#ccc
+        .tab-content {
+            margin-top:0
         }
 
-        .data-button svg {
-            height:16px;
-            width:16px
+        .tab.active {
+            background:#fff;
+            border-bottom:1px solid #fff;
+            border-left:1px solid #ccc;
+            border-right:1px solid #ccc;
+            border-top:1px solid #ccc;
+            color:#444;
+            font-weight:500;
+            height:33px;
+            margin-bottom:-1px
+        }
+
+        .tab.active::after {
+            background:#4CAF50;
+            bottom:-10px;
+            content:'';
+            height:2px;
+            left:0;
+            position:absolute;
+            right:0
+        }
+
+        .tab:hover {
+            background:#4caf501a;
+            border-radius:4px;
+            color:#4CAF50
+        }
+
+        .tab:not(.active):hover {
+            background:#d7d7db;
+            color:#444
         }
 
         .tabs {
@@ -1030,71 +1078,23 @@
             display:none
         }
 
-        .tab {
-            align-items:center;
-            background:#e0e0e6;
-            border:none;
-            border-radius:8px 8px 0 0;
-            color:#666;
-            cursor:pointer;
-            display:flex;
-            flex:1;
-            font-size:13px;
-            height:32px;
-            justify-content:center;
-            margin-left:1px;
-            max-width:200px;
-            min-width:100px;
-            padding:0 16px;
-            position:relative;
-            transition:background-color .2s;
-            white-space:nowrap
+        [data-window-dirty="true"] .save-button {
+            background-color:#4CAF50;
+            box-shadow:0 0 0 2px #4caf504d;
+            color:#fff
         }
 
-        .tab:hover {
-            background:#4caf501a;
-            border-radius:4px;
-            color:#4CAF50
-        }
-
-        .tab.active {
-            background:#fff;
-            border-bottom:1px solid #fff;
-            border-left:1px solid #ccc;
-            border-right:1px solid #ccc;
-            border-top:1px solid #ccc;
-            color:#444;
-            font-weight:500;
-            height:33px;
-            margin-bottom:-1px
-        }
-
-        .tab:not(.active):hover {
-            background:#d7d7db;
-            color:#444
-        }
-
-        .tab.active::after {
-            background:#4CAF50;
-            bottom:-10px;
-            content:'';
-            height:2px;
-            left:0;
-            position:absolute;
-            right:0
-        }
-
-        .tab-content {
-            margin-top:0
+        [data-window-dirty="true"] .save-button svg {
+            color:#fff
         }
 
         @media (max-width: 768px) {
-            .tabs {
-                padding:8px 16px 0
-            }
-
             .tab {
                 min-width:80px
+            }
+
+            .tabs {
+                padding:8px 16px 0
             }
         }
 
@@ -1111,14 +1111,14 @@
             transition:all .2s ease
         }
 
+        .tab:not(.active):hover {
+            background:#d7d7db;
+            color:#444
+        }
+
         html.window-focused .tabs .tab.active {
             background:#4CAF50;
             border-color:#45a049;
-            color:#fff
-        }
-
-        html.window-focused .tabs .tab.active:hover {
-            background:#45a049;
             color:#fff
         }
 
@@ -1126,9 +1126,9 @@
             display:none
         }
 
-        .tab:not(.active):hover {
-            background:#d7d7db;
-            color:#444
+        html.window-focused .tabs .tab.active:hover {
+            background:#45a049;
+            color:#fff
         }
     </style>
 </head>
