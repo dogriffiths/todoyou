@@ -6,7 +6,7 @@ import {table} from "../support/utils";
 describe('Editing todos', () => {
     beforeEach(() => {
         cy.viewport(1280, 720);
-        const now = new Date(2024, 0, 1, 23, 30);  // Jan 1, 2024, 23:30
+        const now = new Date(2024, 0, 1, 23, 15);  // Jan 1, 2024, 23:30
         cy.clock(now);
         cy.visit("/blank.html")
         // @ts-ignore
@@ -14,22 +14,26 @@ describe('Editing todos', () => {
         toDoPage.launch()
     });
 
-    it.only('should be able to record a pomodoro', () => {
+    it('should be able to record a pomodoro', () => {
         toDoPage.newTask.set("Buy fish")
         toDoPage.saveButton.click()
         toDoPage.tasks.item(0).pomodoroButton.click()
-        cy.tick(29 * 60 * 1000); // Advance 29 mins
+        cy.tick(25 * 60 * 1000 - 1);
+        toDoPage.pomodoroRestDialog.assertInvisible()
         toDoPage.tasks.item(0).pomodoroCount.matches("0");
-        cy.tick(1 * 60 * 1000); // Advance 1 min
+        cy.tick(1);
+        toDoPage.pomodoroRestDialog.assertVisible()
         toDoPage.tasks.item(0).pomodoroCount.matches("1");
+        cy.tick(5 * 60 * 1000 + 1);
+        toDoPage.pomodoroRestDialog.assertInvisible()
         toDoPage.journalTab.click()
         toDoPage.journalDays.matches(table`
-        | header    |
-        | Today     |
+        | header |
+        | Today  |
         `)
         toDoPage.journalDays.item(0).journalItems.matches(table`
         | time     | title                             |
-        | 12:00 AM | 🍅 Completed pomodoro: "Buy fish" |
+        | 11:40 PM | 🍅 Completed pomodoro: "Buy fish" |
         `)
 
     });

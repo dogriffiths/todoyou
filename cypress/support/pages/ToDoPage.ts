@@ -58,6 +58,10 @@ export default class ToDoPage extends CypressPage {
         );
     }
 
+    get pomodoroRestDialog() {
+        return new CypressWidget('.pomodoro-rest-dialog', this);
+    }
+
     get habits() {
         return this.collection(
             '.habit-item',

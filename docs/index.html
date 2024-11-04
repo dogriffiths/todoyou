@@ -4605,13 +4605,65 @@
                         startPomodoro(taskId, timerDisplay, startButton);
                     };
 
-                    // Show notification
+                    // Show notification for break
                     if (Notification.permission === "granted") {
-                        new Notification("Pomodoro Complete!", {
-                            body: "Time to take a break!",
+                        new Notification("Time for a Break!", {
+                            body: "Great work! Take a 5-minute break before starting your next pomodoro.",
                             icon: "/favicon.ico"
                         });
                     }
+
+                    // Create and show break dialog
+                    const breakDialog = document.createElement('div');
+                    breakDialog.classList.add('dialog-overlay');
+                    breakDialog.classList.add('pomodoro-rest-dialog');
+                    breakDialog.style.display = 'flex';
+
+                    // Start with 5 minutes break time
+                    let breakTimeLeft = 5 * 60; // 5 minutes in seconds
+
+                    breakDialog.innerHTML = `
+                    <div class="dialog">
+                        <h3>Time for a Break! 🎉</h3>
+                        <p>Well done on completing your pomodoro session!</p>
+                        <p>Take a 5-minute break to recharge. Stand up, stretch, or grab a drink of water.</p>
+                        <div id="break-timer" style="font-size: 1.5em; margin: 15px 0; text-align: center; font-family: monospace;">
+                            5:00
+                        </div>
+                        <div class="dialog-buttons">
+                            <button onclick="this.closest('.dialog-overlay').remove()">Skip Break</button>
+                        </div>
+                    </div>
+                `;
+
+                    document.body.appendChild(breakDialog);
+
+                    // Start break timer
+                    const breakTimerDisplay = breakDialog.querySelector('#break-timer');
+                    const breakTimer = setInterval(() => {
+                        breakTimeLeft--;
+                        const minutes = Math.floor(breakTimeLeft / 60);
+                        const seconds = breakTimeLeft % 60;
+                        breakTimerDisplay.textContent =
+                            `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                        if (breakTimeLeft <= 0) {
+                            clearInterval(breakTimer);
+                            if (Notification.permission === "granted") {
+                                new Notification("Break Complete!", {
+                                    body: "Ready to start your next pomodoro?",
+                                    icon: "/favicon.ico"
+                                });
+                            }
+                            breakDialog.remove();
+                        }
+                    }, 1000);
+
+                    // Clean up timer if dialog is dismissed
+                    const skipButton = breakDialog.querySelector('button');
+                    skipButton.addEventListener('click', () => {
+                        clearInterval(breakTimer);
+                    });
                 }
             }, 1000);
 
