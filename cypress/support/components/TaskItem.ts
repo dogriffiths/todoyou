@@ -22,6 +22,16 @@ class CommentsCountWidget extends CypressWidget {
     }
 }
 
+class PomodoroCountWidget extends CypressWidget {
+    constructor(selector: string | HTMLElement, parent: Component) {
+        super(selector, parent);
+    }
+
+    matches(s: string) {
+        super.matches("🍅 " + s);
+    }
+}
+
 export default class TaskItem extends CypressWidget {
     constructor(selector: string | HTMLElement, parent: Component) {
         super(selector, parent);
@@ -37,6 +47,14 @@ export default class TaskItem extends CypressWidget {
 
     get streak() {
         return new StreakWidget('.streak-count', this);
+    }
+
+    get pomodoroButton() {
+        return new CypressWidget('.pomodoro-button', this);
+    }
+
+    get pomodoroCount() {
+        return new PomodoroCountWidget('.pomodoro-count', this);
     }
 
     get description() {

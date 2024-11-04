@@ -1155,6 +1155,55 @@
                 background: #e8f5e9;
             }
         }
+
+        .pomodoro-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .pomodoro-count {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .timer-display {
+            font-family: monospace;
+            color: #666;
+            min-width: 45px;
+        }
+
+        .pomodoro-button {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pomodoro-button:hover {
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .journal-item .journal-title svg {
+            width: 16px;
+            height: 16px;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+
+        .journal-item[data-store-type="pomodoroJournal"] {
+            background-color: #fff3e0;
+        }
+
+        .journal-item[data-store-type="pomodoroJournal"] .journal-title {
+            color: #e65100;
+        }
     </style>
 </head>
 <body>
@@ -1349,6 +1398,8 @@
     const STORE_NAME = 'todos';
     const COMPLETED_STORE = 'completed';
     const KANBAN_JOURNAL_STORE = 'kanbanJournal';
+    const ACTIVE_POMODORO_STORE = 'activePomodoro';
+    const POMODORO_JOURNAL_STORE = 'pomodoroJournal';
     let currentEditingId = null;
     let currentCalendarDate = new Date();
     let draggedTask = null;
@@ -1365,6 +1416,8 @@
     let touchStartPosition = { x: 0, y: 0 };
     const TOUCH_DELAY = 200; // Time to wait before initiating drag
     const TOUCH_MOVE_THRESHOLD = 10; // Pixels of movement required to initiate drag
+    let activeTimer = null;
+    let isCompletingPomodoro = false;
 
 
     // First, check if running in PWA mode
@@ -1510,7 +1563,7 @@
 
     function initDB() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, 6); // Increment version for schema update
+            const request = indexedDB.open(DB_NAME, 7); // Increment version for schema update
 
             request.onerror = (event) => {
                 console.error('Database error:', event.target.error);
@@ -1541,6 +1594,8 @@
                     store.createIndex('lastReset', 'lastReset', {unique: false});
                     store.createIndex('currentStreak', 'currentStreak', {unique: false}); // Add streak tracking
                     store.createIndex('lastStreakUpdate', 'lastStreakUpdate', {unique: false});
+                    store.createIndex('pomodoros', 'pomodoros', {unique: false}); // Track completed pomodoros
+                    store.createIndex('totalPomodoroTime', 'totalPomodoroTime', {unique: false}); // Track total time
                 } else if (event.oldVersion < 6) {
                     const store = event.target.transaction.objectStore(STORE_NAME);
                     if (!store.indexNames.contains('context')) {
@@ -1565,6 +1620,20 @@
                         autoIncrement: true
                     });
                     journalStore.createIndex('timestamp', 'timestamp', {unique: false});
+                }
+
+                if (!db.objectStoreNames.contains(ACTIVE_POMODORO_STORE)) {
+                    const pomodoroStore = db.createObjectStore(ACTIVE_POMODORO_STORE, {keyPath: 'taskId'});
+                    pomodoroStore.createIndex('startTime', 'startTime', {unique: false});
+                }
+
+                if (!db.objectStoreNames.contains(POMODORO_JOURNAL_STORE)) {
+                    const pomodoroJournalStore = db.createObjectStore(POMODORO_JOURNAL_STORE, {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                    pomodoroJournalStore.createIndex('timestamp', 'timestamp', {unique: false});
+                    pomodoroJournalStore.createIndex('taskId', 'taskId', {unique: false});
                 }
             };
         });
@@ -2011,6 +2080,33 @@
         li.addEventListener('dragend', handleDragEnd);
         li.addEventListener('dragover', handleDragOver);
         li.addEventListener('drop', handleDrop);
+
+        // Add Pomodoro controls
+        const pomodoroContainer = document.createElement('div');
+        pomodoroContainer.className = 'pomodoro-controls';
+
+        const pomodoroCount = document.createElement('span');
+        pomodoroCount.className = 'pomodoro-count';
+        pomodoroCount.innerHTML = `🍅 ${task.pomodoros || 0}`;
+
+        const timerDisplay = document.createElement('span');
+        timerDisplay.className = 'timer-display';
+        timerDisplay.style.display = 'none';
+
+        const startButton = document.createElement('button');
+        startButton.className = 'pomodoro-button';
+        startButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+        startButton.onclick = (e) => {
+            e.stopPropagation();
+            startPomodoro(task.id, timerDisplay, startButton);
+        };
+
+        pomodoroContainer.appendChild(pomodoroCount);
+        pomodoroContainer.appendChild(timerDisplay);
+        pomodoroContainer.appendChild(startButton);
+
+        // Add pomodoro container to task
+        li.appendChild(pomodoroContainer);
 
         return li;
     }
@@ -2924,22 +3020,16 @@
 
         try {
             // Get completed tasks
-            const completedTransaction = db.transaction(COMPLETED_STORE, 'readonly');
-            const completedStore = completedTransaction.objectStore(COMPLETED_STORE);
-            const completedTasks = await new Promise((resolve, reject) => {
-                const request = completedStore.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = reject;
-            });
+            const completedTasks = await idb.execute(db, COMPLETED_STORE, 'readonly',
+                store => idb.operations.getAll(store));
 
             // Get Kanban movements
-            const kanbanTransaction = db.transaction('kanbanJournal', 'readonly');
-            const kanbanStore = kanbanTransaction.objectStore('kanbanJournal');
-            const kanbanMoves = await new Promise((resolve, reject) => {
-                const request = kanbanStore.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = reject;
-            });
+            const kanbanMoves = await idb.execute(db, 'kanbanJournal', 'readonly',
+                store => idb.operations.getAll(store));
+
+            // Get Pomodoro completions
+            const pomodoroEntries = await idb.execute(db, 'pomodoroJournal', 'readonly',
+                store => idb.operations.getAll(store));
 
             // Combine and sort all entries
             const allEntries = [
@@ -2956,6 +3046,13 @@
                     ...move,
                     id: move.id,
                     storeType: KANBAN_JOURNAL_STORE
+                })),
+                ...pomodoroEntries.map(pomodoro => ({
+                    type: 'pomodoro',
+                    timestamp: pomodoro.timestamp,
+                    ...pomodoro,
+                    id: pomodoro.id,
+                    storeType: 'pomodoroJournal'
                 }))
             ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
@@ -2976,12 +3073,23 @@
                 dayDiv.appendChild(dayHeader);
 
                 entries.forEach(entry => {
-                    const entryDiv = entry.type === 'completion' ?
-                        createJournalItem(entry.task) :
-                        createKanbanJournalItem(entry);
-                    entryDiv.dataset.id = entry.id;
-                    entryDiv.dataset.storeType = entry.storeType;
-                    dayDiv.appendChild(entryDiv);
+                    let entryDiv;
+                    switch (entry.type) {
+                        case 'completion':
+                            entryDiv = createJournalItem(entry.task);
+                            break;
+                        case 'kanban_move':
+                            entryDiv = createKanbanJournalItem(entry);
+                            break;
+                        case 'pomodoro':
+                            entryDiv = createPomodoroJournalItem(entry);
+                            break;
+                    }
+                    if (entryDiv) {
+                        entryDiv.dataset.id = entry.id;
+                        entryDiv.dataset.storeType = entry.storeType;
+                        dayDiv.appendChild(entryDiv);
+                    }
                 });
 
                 journalList.appendChild(dayDiv);
@@ -2990,6 +3098,44 @@
             console.error('Error loading journal:', error);
             showStatus('Error loading journal', true);
         }
+    }
+
+    function createPomodoroJournalItem(entry) {
+        const div = document.createElement('div');
+        div.className = 'journal-item';
+
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'journal-time';
+        timeDiv.textContent = new Date(entry.timestamp).toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'journal-content';
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'journal-title';
+        titleDiv.innerHTML = `🍅 Completed pomodoro: "${entry.taskText}"`;
+
+        const descDiv = document.createElement('div');
+        descDiv.className = 'journal-description';
+        descDiv.textContent = `${entry.duration} minutes focused work completed`;
+
+        contentDiv.appendChild(titleDiv);
+        contentDiv.appendChild(descDiv);
+
+        // Create and append delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-button';
+        deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+        deleteButton.onclick = () => confirmDeleteJournalEntry(entry.id, 'pomodoroJournal');
+        div.appendChild(deleteButton);
+
+        div.appendChild(timeDiv);
+        div.appendChild(contentDiv);
+
+        return div;
     }
 
     function groupTasksByDay(tasks) {
@@ -4400,6 +4546,190 @@
         });
     }
 
+    async function startPomodoro(taskId, timerDisplay, startButton) {
+        try {
+            if (activeTimer) {
+                clearInterval(activeTimer);
+                await cancelPomodoro();
+            }
+
+            const POMODORO_MINUTES = 25;
+            let timeLeft = POMODORO_MINUTES * 60;
+            let isCompleting = false; // Flag to prevent multiple completions
+
+            // Save start time in database
+            const transaction = db.transaction('activePomodoro', 'readwrite');
+            const store = transaction.objectStore('activePomodoro');
+
+            await new Promise((resolve, reject) => {
+                const request = store.put({
+                    taskId,
+                    startTime: new Date().toISOString()
+                });
+                request.onsuccess = resolve;
+                request.onerror = reject;
+            });
+
+            // Update UI
+            timerDisplay.style.display = 'inline';
+            startButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>';
+            startButton.onclick = (e) => {
+                e.stopPropagation();
+                cancelPomodoro(taskId, timerDisplay, startButton);
+            };
+
+            function updateDisplay() {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            updateDisplay();
+
+            activeTimer = setInterval(async () => {
+                timeLeft--;
+                updateDisplay();
+
+                if (timeLeft <= 0 && !isCompleting) {
+                    isCompleting = true; // Set flag to prevent multiple completions
+                    clearInterval(activeTimer);
+                    activeTimer = null;
+
+                    await completePomodoro(taskId);
+
+                    // Reset UI
+                    timerDisplay.style.display = 'none';
+                    startButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+                    startButton.onclick = (e) => {
+                        e.stopPropagation();
+                        startPomodoro(taskId, timerDisplay, startButton);
+                    };
+
+                    // Show notification
+                    if (Notification.permission === "granted") {
+                        new Notification("Pomodoro Complete!", {
+                            body: "Time to take a break!",
+                            icon: "/favicon.ico"
+                        });
+                    }
+                }
+            }, 1000);
+
+        } catch (error) {
+            console.error('Error starting pomodoro:', error);
+            showStatus('Error starting pomodoro', true);
+        }
+    }
+
+    async function completePomodoro(taskId) {
+        if (isCompletingPomodoro) {
+            console.log('Already completing a pomodoro, skipping');
+            return;
+        }
+
+        isCompletingPomodoro = true;
+
+        try {
+            // First get the task data
+            const taskTransaction = db.transaction(STORE_NAME, 'readonly');
+            const taskStore = taskTransaction.objectStore(STORE_NAME);
+
+            const task = await new Promise((resolve, reject) => {
+                const request = taskStore.get(taskId);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            if (!task) {
+                console.error('Task not found');
+                return;
+            }
+
+            // Now update the task with new pomodoro count
+            const updateTransaction = db.transaction(STORE_NAME, 'readwrite');
+            const updateStore = updateTransaction.objectStore(STORE_NAME);
+
+            const updatedTask = {
+                ...task,
+                pomodoros: (task.pomodoros || 0) + 1,
+                totalPomodoroTime: (task.totalPomodoroTime || 0) + 25
+            };
+
+            await new Promise((resolve, reject) => {
+                const updateRequest = updateStore.put(updatedTask);
+                updateRequest.onsuccess = resolve;
+                updateRequest.onerror = reject;
+            });
+
+            // Clear the active pomodoro
+            const pomodoroTransaction = db.transaction('activePomodoro', 'readwrite');
+            const pomodoroStore = pomodoroTransaction.objectStore('activePomodoro');
+
+            await new Promise((resolve, reject) => {
+                const deleteRequest = pomodoroStore.delete(taskId);
+                deleteRequest.onsuccess = resolve;
+                deleteRequest.onerror = reject;
+            });
+
+            // Add journal entry
+            const journalTransaction = db.transaction('pomodoroJournal', 'readwrite');
+            const journalStore = journalTransaction.objectStore('pomodoroJournal');
+
+            const journalEntry = {
+                type: 'pomodoro',
+                taskId: taskId,
+                taskText: task.text,
+                timestamp: new Date().toISOString(),
+                duration: 25 // minutes
+            };
+
+            await new Promise((resolve, reject) => {
+                const addRequest = journalStore.add(journalEntry);
+                addRequest.onsuccess = resolve;
+                addRequest.onerror = reject;
+            });
+
+            // Refresh views
+            loadJournal();
+            loadTasks();
+
+        } catch (error) {
+            console.error('Error completing pomodoro:', error);
+            showStatus('Error completing pomodoro', true);
+        } finally {
+            isCompletingPomodoro = false;
+        }
+    }
+
+    async function cancelPomodoro(taskId, timerDisplay, startButton) {
+        try {
+            clearInterval(activeTimer);
+            activeTimer = null;
+
+            // Reset UI
+            timerDisplay.style.display = 'none';
+            startButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+            startButton.onclick = (e) => {
+                e.stopPropagation();
+                startPomodoro(taskId, timerDisplay, startButton);
+            };
+
+            // Clear from database
+            const transaction = db.transaction('activePomodoro', 'readwrite');
+            const store = transaction.objectStore('activePomodoro');
+
+            await new Promise((resolve, reject) => {
+                const request = store.delete(taskId);
+                request.onsuccess = resolve;
+                request.onerror = reject;
+            });
+
+        } catch (error) {
+            console.error('Error canceling pomodoro:', error);
+            showStatus('Error canceling pomodoro', true);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         setupTabs();
         setupDropZone();
@@ -4410,6 +4740,10 @@
         setupAutoReset();
         updateContextsList();
         initializeTouchDragAndDrop();
+
+        if (Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
 
         const habitSort = document.getElementById('habitSort');
         const sortDirection = document.getElementById('sortDirection');
