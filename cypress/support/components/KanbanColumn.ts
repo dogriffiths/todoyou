@@ -1,6 +1,7 @@
 import Component from "../relish-core/Component";
 import CypressWidget from "../relish-cypress/CypressWidget";
 import JournalItem from "./JournalItem";
+import TaskItem from "./TaskItem";
 
 export default class KanbanColumn extends CypressWidget {
     constructor(selector: string | HTMLElement, parent: Component) {
@@ -10,7 +11,7 @@ export default class KanbanColumn extends CypressWidget {
     get tasks() {
         return this.collection(
             '.kanban-task',
-            e => new CypressWidget(e, this)
+            e => new TaskItem(e, this)
         );
     }
 

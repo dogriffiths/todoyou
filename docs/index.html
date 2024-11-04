@@ -3544,23 +3544,65 @@
         div.draggable = true;
         div.dataset.id = task.id;
 
+        // Create content wrapper
+        const contentWrapper = document.createElement('div');
+        contentWrapper.style.display = 'flex';
+        contentWrapper.style.justifyContent = 'space-between';
+        contentWrapper.style.alignItems = 'flex-start';
+        contentWrapper.style.gap = '8px';
+
+        // Create left side content
+        const textContent = document.createElement('div');
+        textContent.style.flex = '1';
+
         const title = document.createElement('div');
         title.className = 'kanban-task-title';
         title.textContent = task.text;
+        textContent.appendChild(title);
 
-        const description = document.createElement('div');
-        description.className = 'kanban-task-description';
-        description.textContent = task.description || '';
-
-        div.appendChild(title);
         if (task.description) {
-            div.appendChild(description);
+            const description = document.createElement('div');
+            description.className = 'kanban-task-description';
+            description.textContent = task.description;
+            textContent.appendChild(description);
         }
+
+        contentWrapper.appendChild(textContent);
+
+        // Add Pomodoro controls
+        const pomodoroContainer = document.createElement('div');
+        pomodoroContainer.className = 'pomodoro-controls';
+
+        const pomodoroCount = document.createElement('span');
+        pomodoroCount.className = 'pomodoro-count';
+        pomodoroCount.innerHTML = `🍅 ${task.pomodoros || 0}`;
+
+        const timerDisplay = document.createElement('span');
+        timerDisplay.className = 'timer-display';
+        timerDisplay.style.display = 'none';
+
+        const startButton = document.createElement('button');
+        startButton.className = 'pomodoro-button';
+        startButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+        startButton.onclick = (e) => {
+            e.stopPropagation();
+            startPomodoro(task.id, timerDisplay, startButton);
+        };
+
+        pomodoroContainer.appendChild(pomodoroCount);
+        pomodoroContainer.appendChild(timerDisplay);
+        pomodoroContainer.appendChild(startButton);
+
+        contentWrapper.appendChild(pomodoroContainer);
+        div.appendChild(contentWrapper);
 
         // Add drag and drop event listeners
         div.addEventListener('dragstart', handleKanbanDragStart);
         div.addEventListener('dragend', handleKanbanDragEnd);
         div.addEventListener('click', () => openEditDialog(task));
+
+        // Add touch drag handlers
+        addTouchDragHandlers(div);
 
         return div;
     }
@@ -4741,15 +4783,40 @@
                 addRequest.onerror = reject;
             });
 
-            // Refresh views
+            // Update UI in both task list and kanban views
             loadJournal();
             loadTasks();
+            loadKanban();
+
+            // Immediately update the pomodoro count in both views
+            updatePomodoroCountDisplay(taskId, updatedTask.pomodoros);
 
         } catch (error) {
             console.error('Error completing pomodoro:', error);
             showStatus('Error completing pomodoro', true);
         } finally {
             isCompletingPomodoro = false;
+        }
+    }
+
+    // Helper function to update pomodoro count display in both views
+    function updatePomodoroCountDisplay(taskId, count) {
+        // Update in task list view
+        const taskListItem = document.querySelector(`#taskList .task-item[data-id="${taskId}"]`);
+        if (taskListItem) {
+            const pomodoroCount = taskListItem.querySelector('.pomodoro-count');
+            if (pomodoroCount) {
+                pomodoroCount.innerHTML = `🍅 ${count}`;
+            }
+        }
+
+        // Update in kanban view
+        const kanbanTask = document.querySelector(`.kanban-task[data-id="${taskId}"]`);
+        if (kanbanTask) {
+            const pomodoroCount = kanbanTask.querySelector('.pomodoro-count');
+            if (pomodoroCount) {
+                pomodoroCount.innerHTML = `🍅 ${count}`;
+            }
         }
     }
 

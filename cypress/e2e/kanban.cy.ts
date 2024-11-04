@@ -29,36 +29,36 @@ describe('Kanban tab', () => {
         | Done        |
         `)
         toDoPage.kanbanColumns.item(0).tasks.matches(table`
-        | content     |
-        | Buy fish    |
-        | Buy bread   |
-        | Check email |
+        | kanbanTaskTitle |
+        | Buy fish        |
+        | Buy bread       |
+        | Check email     |
         `)
         toDoPage.kanbanColumns.item(1).tasks.assertEmpty()
         toDoPage.kanbanColumns.item(2).tasks.assertEmpty()
         toDoPage.kanbanColumns.item(0).tasks.item(1).dragTo(toDoPage.kanbanColumns.item(1))
         toDoPage.kanbanColumns.item(0).tasks.matches(table`
-        | content     |
-        | Buy fish    |
-        | Check email |
+        | kanbanTaskTitle |
+        | Buy fish        |
+        | Check email     |
         `)
         toDoPage.kanbanColumns.item(1).tasks.matches(table`
-        | content     |
-        | Buy bread   |
+        | kanbanTaskTitle |
+        | Buy bread       |
         `)
         toDoPage.kanbanColumns.item(2).tasks.assertEmpty()
         toDoPage.kanbanColumns.item(0).tasks.item(0).dragTo(toDoPage.kanbanColumns.item(2))
         toDoPage.kanbanColumns.item(0).tasks.matches(table`
-        | content     |
-        | Check email |
+        | kanbanTaskTitle |
+        | Check email     |
         `)
         toDoPage.kanbanColumns.item(1).tasks.matches(table`
-        | content     |
-        | Buy bread   |
+        | kanbanTaskTitle |
+        | Buy bread       |
         `)
         toDoPage.kanbanColumns.item(2).tasks.matches(table`
-        | content     |
-        | Buy fish    |
+        | kanbanTaskTitle |
+        | Buy fish        |
         `)
         toDoPage.journalTab.click()
         toDoPage.journalDays.matches(table`

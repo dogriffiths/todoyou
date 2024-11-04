@@ -35,6 +35,30 @@ describe('Editing todos', () => {
         | time     | title                             |
         | 11:40 PM | 🍅 Completed pomodoro: "Buy fish" |
         `)
+    });
 
+    it('should be able to record a pomodoro from kanban', () => {
+        toDoPage.newTask.set("Buy fish")
+        toDoPage.saveButton.click()
+        toDoPage.kanbanTab.click()
+        toDoPage.kanbanColumns.item(0).tasks.item(0).pomodoroButton.click()
+        // toDoPage.tasks.item(0).pomodoroButton.click()
+        cy.tick(25 * 60 * 1000 - 1);
+        toDoPage.pomodoroRestDialog.assertInvisible()
+        toDoPage.kanbanColumns.item(0).tasks.item(0).pomodoroCount.matches("0");
+        cy.tick(1);
+        toDoPage.pomodoroRestDialog.assertVisible()
+        toDoPage.kanbanColumns.item(0).tasks.item(0).pomodoroCount.matches("1");
+        cy.tick(5 * 60 * 1000 + 1);
+        toDoPage.pomodoroRestDialog.assertInvisible()
+        toDoPage.journalTab.click()
+        toDoPage.journalDays.matches(table`
+        | header |
+        | Today  |
+        `)
+        toDoPage.journalDays.item(0).journalItems.matches(table`
+        | time     | title                             |
+        | 11:40 PM | 🍅 Completed pomodoro: "Buy fish" |
+        `)
     });
 });

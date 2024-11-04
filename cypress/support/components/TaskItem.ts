@@ -45,6 +45,10 @@ export default class TaskItem extends CypressWidget {
         return new CypressWidget('.task-header span', this);
     }
 
+    get kanbanTaskTitle() {
+        return new CypressWidget('.kanban-task-title', this);
+    }
+
     get streak() {
         return new StreakWidget('.streak-count', this);
     }
