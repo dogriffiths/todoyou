@@ -4591,8 +4591,23 @@
     async function startPomodoro(taskId, timerDisplay, startButton) {
         try {
             if (activeTimer) {
-                clearInterval(activeTimer);
-                await cancelPomodoro();
+                // Get the currently running pomodoro
+                const transaction = db.transaction('activePomodoro', 'readonly');
+                const store = transaction.objectStore('activePomodoro');
+                const activePomodoro = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result[0]); // Get the first (and should be only) active pomodoro
+                    request.onerror = reject;
+                });
+
+                if (activePomodoro) {
+                    clearInterval(activeTimer);
+                    await cancelPomodoro(
+                        activePomodoro.taskId,
+                        document.querySelector(`[data-id="${activePomodoro.taskId}"] .timer-display`),
+                        document.querySelector(`[data-id="${activePomodoro.taskId}"] .pomodoro-button`)
+                    );
+                }
             }
 
             const POMODORO_MINUTES = 25;
@@ -4621,104 +4636,38 @@
                 cancelPomodoro(taskId, timerDisplay, startButton);
             };
 
-            function updateDisplay() {
+            async function updateDisplay() {
                 const now = new Date();
                 const elapsedMs = now - startTime;
                 const remainingMs = Math.max(0, POMODORO_MS - elapsedMs);
                 const remainingSeconds = Math.ceil(remainingMs / 1000);
                 const minutes = Math.floor(remainingSeconds / 60);
                 const seconds = remainingSeconds % 60;
-                timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                // Update all instances of this timer in the UI
+                document.querySelectorAll(`[data-id="${taskId}"] .timer-display`).forEach(display => {
+                    display.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    display.style.display = 'inline';
+                });
+
+                document.querySelectorAll(`[data-id="${taskId}"] .pomodoro-button`).forEach(button => {
+                    button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>';
+                    button.onclick = (e) => {
+                        e.stopPropagation();
+                        cancelPomodoro(taskId, timerDisplay, startButton);
+                    };
+                });
 
                 // Check if pomodoro is complete
                 if (remainingMs <= 0 && !isCompleting) {
+                    console.log('Pomodoro complete, handling completion...'); // Debug log
                     isCompleting = true;
                     clearInterval(activeTimer);
                     activeTimer = null;
-                    handlePomodoroCompletion();
+                    await handleGlobalPomodoroCompletion(taskId);
+                    return true; // Indicate completion
                 }
-            }
-
-            async function handlePomodoroCompletion() {
-                await completePomodoro(taskId);
-
-                // Reset UI
-                timerDisplay.style.display = 'none';
-                startButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
-                startButton.onclick = (e) => {
-                    e.stopPropagation();
-                    startPomodoro(taskId, timerDisplay, startButton);
-                };
-
-                // Show notification
-                if (Notification.permission === "granted") {
-                    new Notification("Time for a Break!", {
-                        body: "Great work! Take a 5-minute break before starting your next pomodoro.",
-                        icon: "/favicon.ico"
-                    });
-                }
-
-                showBreakDialog();
-            }
-
-            function showBreakDialog() {
-                const breakDialog = document.createElement('div');
-                breakDialog.classList.add('dialog-overlay', 'pomodoro-rest-dialog');
-                breakDialog.style.display = 'flex';
-
-                const breakStartTime = new Date();
-                const BREAK_MINUTES = 5;
-                const BREAK_MS = BREAK_MINUTES * 60 * 1000;
-
-                breakDialog.innerHTML = `
-                <div class="dialog">
-                    <h3>Time for a Break! 🎉</h3>
-                    <p>Well done on completing your pomodoro session!</p>
-                    <p>Take a 5-minute break to recharge. Stand up, stretch, or grab a drink of water.</p>
-                    <div id="break-timer" style="font-size: 1.5em; margin: 15px 0; text-align: center; font-family: monospace;">
-                        5:00
-                    </div>
-                    <div class="dialog-buttons">
-                        <button onclick="this.closest('.dialog-overlay').remove()">Skip Break</button>
-                    </div>
-                </div>
-            `;
-
-                document.body.appendChild(breakDialog);
-
-                const breakTimerDisplay = breakDialog.querySelector('#break-timer');
-
-                function updateBreakTimer() {
-                    const now = new Date();
-                    const elapsedMs = now - breakStartTime;
-                    const remainingMs = Math.max(0, BREAK_MS - elapsedMs);
-                    const remainingSeconds = Math.ceil(remainingMs / 1000);
-                    const minutes = Math.floor(remainingSeconds / 60);
-                    const seconds = remainingSeconds % 60;
-
-                    breakTimerDisplay.textContent =
-                        `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-                    if (remainingMs <= 0) {
-                        clearInterval(breakTimer);
-                        if (Notification.permission === "granted") {
-                            new Notification("Break Complete!", {
-                                body: "Ready to start your next pomodoro?",
-                                icon: "/favicon.ico"
-                            });
-                        }
-                        breakDialog.remove();
-                    }
-                }
-
-                const breakTimer = setInterval(updateBreakTimer, 1000);
-                updateBreakTimer(); // Initial display
-
-                // Clean up timer if dialog is dismissed
-                const skipButton = breakDialog.querySelector('button');
-                skipButton.addEventListener('click', () => {
-                    clearInterval(breakTimer);
-                });
+                return false; // Not complete
             }
 
             // Start the timer updates
@@ -4726,16 +4675,185 @@
             activeTimer = setInterval(updateDisplay, 1000);
 
             // Additional check for tab visibility changes
-            document.addEventListener('visibilitychange', function onVisibilityChange() {
+            const visibilityHandler = async function onVisibilityChange() {
                 if (!document.hidden) {
-                    updateDisplay(); // Immediate update when tab becomes visible
+                    // Check if this timer should still be running
+                    const transaction = db.transaction('activePomodoro', 'readonly');
+                    const store = transaction.objectStore('activePomodoro');
+                    const activePomodoro = await store.get(taskId);
+
+                    if (activePomodoro) {
+                        updateDisplay(); // Update if still active
+                    } else {
+                        // Clean up if no longer active
+                        clearInterval(activeTimer);
+                        document.removeEventListener('visibilitychange', visibilityHandler);
+                    }
                 }
-            });
+            };
+
+            document.addEventListener('visibilitychange', visibilityHandler);
 
         } catch (error) {
             console.error('Error starting pomodoro:', error);
             showStatus('Error starting pomodoro', true);
         }
+    }
+
+    async function handleGlobalPomodoroCompletion(taskId) {
+        console.log('Starting global pomodoro completion for task:', taskId); // Debug log
+
+        if (!taskId) {
+            console.error('Attempted to complete pomodoro without taskId');
+            return;
+        }
+
+        try {
+            // Get the task info for the notification
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const task = await new Promise((resolve, reject) => {
+                const request = store.get(taskId);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            console.log('Task found:', task); // Debug log
+
+            // Complete the pomodoro first
+            await completePomodoro(taskId);
+            console.log('Pomodoro marked as complete'); // Debug log
+
+            // Reset UI across all views
+            document.querySelectorAll(`[data-id="${taskId}"]`).forEach(taskElement => {
+                const timerDisplay = taskElement.querySelector('.timer-display');
+                const startButton = taskElement.querySelector('.pomodoro-button');
+
+                if (timerDisplay) {
+                    timerDisplay.style.display = 'none';
+                }
+
+                if (startButton) {
+                    startButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+                    const display = startButton.parentElement.querySelector('.timer-display');
+                    startButton.onclick = (e) => {
+                        e.stopPropagation();
+                        startPomodoro(taskId, display, startButton);
+                    };
+                }
+            });
+            console.log('UI reset complete'); // Debug log
+
+            // Remove any existing break dialog
+            const existingDialog = document.querySelector('.pomodoro-rest-dialog');
+            if (existingDialog) {
+                existingDialog.remove();
+                console.log('Removed existing break dialog'); // Debug log
+            }
+
+            // Show notification
+            if (Notification.permission === "granted") {
+                new Notification("Pomodoro Complete! 🎉", {
+                    body: `Completed pomodoro for: ${task?.text || 'task'}`,
+                    icon: "/favicon.ico"
+                });
+                console.log('Notification sent'); // Debug log
+            }
+
+            // Call showBreakDialog directly
+            console.log('About to show break dialog...'); // Debug log
+            showBreakDialog();
+            console.log('Break dialog should be visible'); // Debug log
+
+        } catch (error) {
+            console.error('Error in global pomodoro completion:', error);
+            showStatus('Error completing pomodoro', true);
+        }
+    }
+
+    function showBreakDialog() {
+        console.log('showBreakDialog called'); // Debug log
+
+        // Create break dialog
+        const breakDialog = document.createElement('div');
+        breakDialog.classList.add('dialog-overlay', 'pomodoro-rest-dialog');
+        breakDialog.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1001; justify-content: center; align-items: center;';
+
+        const BREAK_MINUTES = 5;
+        const breakStartTime = new Date();
+        let breakTimer;
+
+        breakDialog.innerHTML = `
+        <div class="dialog" style="background: white; padding: 20px; border-radius: 8px; min-width: 300px; text-align: center;">
+            <h3 style="margin-top: 0;">Time for a Break! 🎉</h3>
+            <p>Well done on completing your pomodoro session!</p>
+            <p>Take a ${BREAK_MINUTES}-minute break to recharge.</p>
+            <div id="break-timer" style="font-size: 2em; margin: 20px 0; font-family: monospace; font-weight: bold;">
+                ${BREAK_MINUTES}:00
+            </div>
+            <div class="dialog-buttons">
+                <button onclick="this.closest('.dialog-overlay').remove()" style="background: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                    Skip Break
+                </button>
+            </div>
+        </div>
+    `;
+
+        // Append to body
+        document.body.appendChild(breakDialog);
+        console.log('Break dialog appended to document'); // Debug log
+
+        const breakTimerDisplay = breakDialog.querySelector('#break-timer');
+        const BREAK_MS = BREAK_MINUTES * 60 * 1000;
+
+        function updateBreakTimer() {
+            const now = new Date();
+            const elapsedMs = now - breakStartTime;
+            const remainingMs = Math.max(0, BREAK_MS - elapsedMs);
+            const remainingSeconds = Math.ceil(remainingMs / 1000);
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+
+            if (breakTimerDisplay) {
+                breakTimerDisplay.textContent =
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            if (remainingMs <= 0) {
+                clearInterval(breakTimer);
+                if (document.body.contains(breakDialog)) {
+                    breakDialog.remove();
+                    console.log('Break timer completed, dialog removed'); // Debug log
+                    if (Notification.permission === "granted") {
+                        new Notification("Break Complete!", {
+                            body: "Ready to start your next pomodoro?",
+                            icon: "/favicon.ico"
+                        });
+                    }
+                }
+            }
+        }
+
+        // Start break timer
+        breakTimer = setInterval(updateBreakTimer, 1000);
+        updateBreakTimer(); // Initial display
+        console.log('Break timer started'); // Debug log
+
+        // Clean up when dialog is closed
+        breakDialog.querySelector('button').addEventListener('click', () => {
+            clearInterval(breakTimer);
+            console.log('Break timer cleared by user'); // Debug log
+        });
+
+        // Ensure dialog is visible
+        setTimeout(() => {
+            if (!document.body.contains(breakDialog)) {
+                console.log('Dialog not found in DOM after timeout'); // Debug log
+                document.body.appendChild(breakDialog);
+            }
+        }, 100);
+
+        return breakDialog;
     }
 
     async function completePomodoro(taskId) {
@@ -4844,17 +4962,28 @@
     }
 
     async function cancelPomodoro(taskId, timerDisplay, startButton) {
+        if (!taskId) {
+            console.error('Attempted to cancel pomodoro without taskId');
+            return;
+        }
+
         try {
             clearInterval(activeTimer);
             activeTimer = null;
 
-            // Reset UI
-            timerDisplay.style.display = 'none';
-            startButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
-            startButton.onclick = (e) => {
-                e.stopPropagation();
-                startPomodoro(taskId, timerDisplay, startButton);
-            };
+            // Reset UI for all instances of this task
+            document.querySelectorAll(`[data-id="${taskId}"] .timer-display`).forEach(display => {
+                display.style.display = 'none';
+            });
+
+            document.querySelectorAll(`[data-id="${taskId}"] .pomodoro-button`).forEach(button => {
+                button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+                button.onclick = (e) => {
+                    e.stopPropagation();
+                    const display = button.parentElement.querySelector('.timer-display');
+                    startPomodoro(taskId, display, button);
+                };
+            });
 
             // Clear from database
             const transaction = db.transaction('activePomodoro', 'readwrite');

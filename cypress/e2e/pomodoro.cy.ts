@@ -42,13 +42,16 @@ describe('Editing todos', () => {
         toDoPage.saveButton.click()
         toDoPage.kanbanTab.click()
         toDoPage.kanbanColumns.item(0).tasks.item(0).pomodoroButton.click()
-        // toDoPage.tasks.item(0).pomodoroButton.click()
         cy.tick(25 * 60 * 1000 - 1);
+        toDoPage.kanbanColumns.item(0).tasks.item(0).timerDisplay.assertVisible();
+        toDoPage.tasksTab.click()
+        toDoPage.tasks.item(0).timerDisplay.assertVisible();
+        toDoPage.kanbanTab.click()
         toDoPage.pomodoroRestDialog.assertInvisible()
         toDoPage.kanbanColumns.item(0).tasks.item(0).pomodoroCount.matches("0");
         cy.tick(1);
-        toDoPage.pomodoroRestDialog.assertVisible()
         toDoPage.kanbanColumns.item(0).tasks.item(0).pomodoroCount.matches("1");
+        toDoPage.pomodoroRestDialog.assertVisible()
         cy.tick(5 * 60 * 1000 + 1);
         toDoPage.pomodoroRestDialog.assertInvisible()
         toDoPage.journalTab.click()

@@ -61,6 +61,10 @@ export default class TaskItem extends CypressWidget {
         return new PomodoroCountWidget('.pomodoro-count', this);
     }
 
+    get timerDisplay() {
+        return new CypressWidget('.timer-display', this);
+    }
+
     get description() {
         return new CypressWidget('.task-description', this);
     }
