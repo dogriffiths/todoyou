@@ -5075,6 +5075,30 @@
     if (document.hasFocus()) {
         document.documentElement.classList.add('window-focused');
     }
+
+    async function handleIncomingShare() {
+        // Get the shared data from the URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedText = urlParams.get('text') || urlParams.get('title');
+
+        if (sharedText) {
+            // Process the shared text as if it were a text file import
+            try {
+                const tasks = parseTextToTasks(sharedText);
+                await importTasks(tasks);
+                showStatus('Message imported successfully');
+            } catch (error) {
+                console.error('Error processing shared text:', error);
+                showStatus('Error processing shared text', true);
+            }
+        }
+    }
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            handleIncomingShare();
+        });
+    }
 </script>
 </body>
 </html>
