@@ -64,4 +64,35 @@ describe('Editing todos', () => {
         | 11:40 PM | 🍅 Completed pomodoro: "Buy fish" |
         `)
     });
+
+    it('should keep the pomodoro running if we leave the page and come back', () => {
+        toDoPage.newTask.set("Buy fish")
+        toDoPage.saveButton.click()
+        toDoPage.kanbanTab.click()
+        toDoPage.kanbanColumns.item(0).tasks.item(0).pomodoroButton.click()
+        cy.tick(24 * 60 * 1000);
+        toDoPage.kanbanColumns.item(0).tasks.item(0).timerDisplay.assertVisible();
+        toDoPage.pomodoroRestDialog.assertInvisible()
+        toDoPage.kanbanColumns.item(0).tasks.item(0).pomodoroCount.matches("0");
+        // cy.reload()
+        //     .then(() => {
+        //     const now = new Date(2024, 0, 1, 23, 55);  // Jan 1, 2024, 23:30
+        //     cy.clock(now, ['Date', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval']);
+        // })
+        // toDoPage.kanbanTab.click()
+        // cy.tick(1 * 60 * 1000);
+        // toDoPage.kanbanColumns.item(0).tasks.item(0).pomodoroCount.matches("1");
+        // toDoPage.pomodoroRestDialog.assertVisible()
+        // cy.tick(5 * 60 * 1000 + 1);
+        // toDoPage.pomodoroRestDialog.assertInvisible()
+        // toDoPage.journalTab.click()
+        // toDoPage.journalDays.matches(table`
+        // | header |
+        // | Today  |
+        // `)
+        // toDoPage.journalDays.item(0).journalItems.matches(table`
+        // | time     | title                             |
+        // | 11:40 PM | 🍅 Completed pomodoro: "Buy fish" |
+        // `)
+    });
 });

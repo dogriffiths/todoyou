@@ -1577,6 +1577,7 @@
                 loadJournal();
                 loadKanban();
                 loadCompletedTasks();
+                initializePomodoroRestoration();
                 resolve(db);
             };
 
@@ -4588,7 +4589,7 @@
         });
     }
 
-    async function startPomodoro(taskId, timerDisplay, startButton) {
+    async function startPomodoro(taskId, timerDisplay, startButton, existingStartTime = null) {
         try {
             if (activeTimer) {
                 // Get the currently running pomodoro
@@ -4596,7 +4597,7 @@
                 const store = transaction.objectStore('activePomodoro');
                 const activePomodoro = await new Promise((resolve, reject) => {
                     const request = store.getAll();
-                    request.onsuccess = () => resolve(request.result[0]); // Get the first (and should be only) active pomodoro
+                    request.onsuccess = () => resolve(request.result[0]);
                     request.onerror = reject;
                 });
 
@@ -4614,19 +4615,23 @@
             const POMODORO_MS = POMODORO_MINUTES * 60 * 1000;
             let isCompleting = false;
 
-            // Save start time in database
-            const startTime = new Date();
-            const transaction = db.transaction('activePomodoro', 'readwrite');
-            const store = transaction.objectStore('activePomodoro');
+            // Use existing start time if provided, otherwise create new
+            const startTime = existingStartTime ? new Date(existingStartTime) : new Date();
 
-            await new Promise((resolve, reject) => {
-                const request = store.put({
-                    taskId,
-                    startTime: startTime.toISOString()
+            // Only save to database if this is a new pomodoro
+            if (!existingStartTime) {
+                const transaction = db.transaction('activePomodoro', 'readwrite');
+                const store = transaction.objectStore('activePomodoro');
+
+                await new Promise((resolve, reject) => {
+                    const request = store.put({
+                        taskId,
+                        startTime: startTime.toISOString()
+                    });
+                    request.onsuccess = resolve;
+                    request.onerror = reject;
                 });
-                request.onsuccess = resolve;
-                request.onerror = reject;
-            });
+            }
 
             // Update UI
             timerDisplay.style.display = 'inline';
@@ -4658,41 +4663,21 @@
                     };
                 });
 
-                // Check if pomodoro is complete
                 if (remainingMs <= 0 && !isCompleting) {
-                    console.log('Pomodoro complete, handling completion...'); // Debug log
                     isCompleting = true;
                     clearInterval(activeTimer);
                     activeTimer = null;
                     await handleGlobalPomodoroCompletion(taskId);
-                    return true; // Indicate completion
+                    return true;
                 }
-                return false; // Not complete
+                return false;
             }
 
+            // Initial display update
+            await updateDisplay();
+
             // Start the timer updates
-            updateDisplay(); // Initial display
             activeTimer = setInterval(updateDisplay, 1000);
-
-            // Additional check for tab visibility changes
-            const visibilityHandler = async function onVisibilityChange() {
-                if (!document.hidden) {
-                    // Check if this timer should still be running
-                    const transaction = db.transaction('activePomodoro', 'readonly');
-                    const store = transaction.objectStore('activePomodoro');
-                    const activePomodoro = await store.get(taskId);
-
-                    if (activePomodoro) {
-                        updateDisplay(); // Update if still active
-                    } else {
-                        // Clean up if no longer active
-                        clearInterval(activeTimer);
-                        document.removeEventListener('visibilitychange', visibilityHandler);
-                    }
-                }
-            };
-
-            document.addEventListener('visibilitychange', visibilityHandler);
 
         } catch (error) {
             console.error('Error starting pomodoro:', error);
@@ -4999,6 +4984,67 @@
             console.error('Error canceling pomodoro:', error);
             showStatus('Error canceling pomodoro', true);
         }
+    }
+
+    async function restoreActivePomodoroOnLoad() {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction('activePomodoro', 'readonly');
+            const store = transaction.objectStore('activePomodoro');
+            const activePomodoros = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            if (activePomodoros && activePomodoros.length > 0) {
+                const activePomodoro = activePomodoros[0];
+                const startTime = new Date(activePomodoro.startTime);
+                const now = new Date();
+                const elapsedMs = now - startTime;
+                const POMODORO_MS = 25 * 60 * 1000;
+                const remainingMs = POMODORO_MS - elapsedMs;
+
+                // Check if the pomodoro should still be running
+                if (remainingMs > 0) {
+                    // Find all instances of this task in the UI and restart their timers
+                    const taskElements = document.querySelectorAll(`[data-id="${activePomodoro.taskId}"]`);
+                    taskElements.forEach(taskElement => {
+                        const timerDisplay = taskElement.querySelector('.timer-display');
+                        const startButton = taskElement.querySelector('.pomodoro-button');
+                        if (timerDisplay && startButton) {
+                            // Call startPomodoro with the existing start time
+                            startPomodoro(
+                                activePomodoro.taskId,
+                                timerDisplay,
+                                startButton,
+                                startTime // Pass the original start time
+                            );
+                        }
+                    });
+                } else {
+                    // Pomodoro should have completed while page was closed
+                    await handleGlobalPomodoroCompletion(activePomodoro.taskId);
+                }
+            }
+        } catch (error) {
+            console.error('Error restoring active pomodoro:', error);
+        }
+    }
+
+    async function checkPomodoroOnVisibilityChange() {
+        if (!document.hidden) {
+            await restoreActivePomodoroOnLoad();
+        }
+    }
+
+    function initializePomodoroRestoration() {
+        // Restore any active pomodoro when the page loads
+        restoreActivePomodoroOnLoad();
+
+        // Check pomodoro status when tab becomes visible
+        document.addEventListener('visibilitychange', checkPomodoroOnVisibilityChange);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
