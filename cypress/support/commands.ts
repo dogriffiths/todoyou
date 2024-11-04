@@ -55,23 +55,19 @@ Cypress.Commands.add('deleteDatabase', (dbName) => {
                 const req = win.indexedDB.deleteDatabase(dbName);
 
                 req.onerror = () => {
-                    console.log('XXXXXX onerror')
                     reject(new Error(`Failed to delete IndexedDB: ${dbName}`));
                 };
 
                 req.onsuccess = () => {
-                    console.log('XXXXXX onsuccess')
                     resolve();
                 };
 
                 req.onblocked = () => {
-                    console.log('XXXXXX onblocked')
                     // Handle case where database is still in use
                     cy.log('Database deletion blocked - closing connections');
                     // Force close any open connections
                     win.indexedDB.databases().then((databases) => {
                         databases.forEach((db) => {
-                            console.log('XXXXXX database', db)
                             if (db.name === dbName) {
                                 // @ts-ignore
                                 const closeRequest = win.indexedDB.open(db.name);

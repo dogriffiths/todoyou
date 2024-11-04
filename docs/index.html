@@ -1361,6 +1361,11 @@
     let originalElement = null;
     let touchOffsetX = 0;
     let touchOffsetY = 0;
+    let touchStartTime = 0;
+    let touchStartPosition = { x: 0, y: 0 };
+    const TOUCH_DELAY = 200; // Time to wait before initiating drag
+    const TOUCH_MOVE_THRESHOLD = 10; // Pixels of movement required to initiate drag
+
 
     // First, check if running in PWA mode
     const isPWA = () => {
@@ -4238,6 +4243,8 @@
         ghost.style.opacity = '0.8';
         ghost.style.pointerEvents = 'none';
         ghost.style.zIndex = '1000';
+        ghost.style.backgroundColor = '#fff';
+        ghost.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         document.body.appendChild(ghost);
         return ghost;
     }
@@ -4256,64 +4263,70 @@
         if (e.touches.length > 1) return;
 
         const touch = e.touches[0];
-        const element = e.currentTarget;
+        touchStartTime = Date.now();
+        touchStartPosition = {
+            x: touch.clientX,
+            y: touch.clientY
+        };
 
-        // Calculate touch offset relative to element
+        const element = e.currentTarget;
         const rect = element.getBoundingClientRect();
         touchOffsetX = touch.clientX - rect.left;
         touchOffsetY = touch.clientY - rect.top;
+    }
 
-        // Start drag after a small delay to distinguish from scrolling
-        setTimeout(() => {
-            if (element.matches(':active')) {
+    function handleTouchMove(e) {
+        if (touchDragging && ghostElement) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            updateGhostPosition(touch.clientX, touch.clientY);
+
+            const dropTarget = findDropTarget(touch.clientX, touch.clientY);
+            document.querySelectorAll('.kanban-column').forEach(column => {
+                column.classList.toggle('drag-over', column === dropTarget);
+            });
+            return;
+        }
+
+        // Check if we should initiate dragging
+        if (e.touches.length === 1 && !touchDragging) {
+            const touch = e.touches[0];
+            const moveDistance = Math.sqrt(
+                Math.pow(touch.clientX - touchStartPosition.x, 2) +
+                Math.pow(touch.clientY - touchStartPosition.y, 2)
+            );
+
+            const timeElapsed = Date.now() - touchStartTime;
+
+            // Only initiate drag if we've moved past threshold and enough time has passed
+            if (moveDistance > TOUCH_MOVE_THRESHOLD && timeElapsed > TOUCH_DELAY) {
+                const element = e.currentTarget;
                 touchDragging = true;
                 touchDragSource = element;
                 originalElement = element;
 
-                // Create and position ghost element
                 ghostElement = createGhostElement(element);
                 updateGhostPosition(touch.clientX, touch.clientY);
-
-                // Add visual feedback
                 element.style.opacity = '0.4';
 
-                // Trigger dragstart-like behavior
                 if (typeof handleKanbanDragStart === 'function') {
                     const customEvent = new Event('dragstart');
                     element.dispatchEvent(customEvent);
                 }
             }
-        }, 200);
-    }
-
-    function handleTouchMove(e) {
-        if (!touchDragging || !ghostElement) return;
-        e.preventDefault(); // Prevent scrolling while dragging
-
-        const touch = e.touches[0];
-        updateGhostPosition(touch.clientX, touch.clientY);
-
-        // Find drop target under touch point
-        const dropTarget = findDropTarget(touch.clientX, touch.clientY);
-
-        // Update visual feedback for drop targets
-        document.querySelectorAll('.kanban-column').forEach(column => {
-            if (column === dropTarget) {
-                column.classList.add('drag-over');
-            } else {
-                column.classList.remove('drag-over');
-            }
-        });
+        }
     }
 
     function handleTouchEnd(e) {
-        if (!touchDragging) return;
+        // If we're not dragging, this was a tap - don't clean up any drag state
+        if (!touchDragging) {
+            return;
+        }
 
         const touch = e.changedTouches[0];
         const dropTarget = findDropTarget(touch.clientX, touch.clientY);
 
         if (dropTarget && originalElement) {
-            // Trigger drop-like behavior
             const customEvent = new Event('drop');
             customEvent.dataTransfer = {
                 types: ['application/x-task'],
@@ -4322,7 +4335,11 @@
             dropTarget.dispatchEvent(customEvent);
         }
 
-        // Clean up
+        // Clean up drag state
+        cleanupDragState();
+    }
+
+    function cleanupDragState() {
         if (ghostElement) {
             ghostElement.remove();
             ghostElement = null;
@@ -4338,6 +4355,8 @@
 
         touchDragging = false;
         touchDragSource = null;
+        touchStartTime = 0;
+        touchStartPosition = { x: 0, y: 0 };
     }
 
     function updateGhostPosition(x, y) {
@@ -4562,12 +4581,18 @@
         });
     });
 
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            cleanupDragState();
+        }
+    });
+
     window.addEventListener('focus', () => {
         document.documentElement.classList.add('window-focused');
     });
 
     window.addEventListener('blur', () => {
-        document.documentElement.classList.remove('window-focused');
+        cleanupDragState();
     });
 
     // Initialize focus state on page load
