@@ -772,7 +772,7 @@
             flex:1;
             flex-direction:column;
             min-width:300px;
-            padding:16px;
+            padding:16px
         }
 
         .kanban-column-content {
@@ -795,7 +795,7 @@
         .kanban-container {
             display:flex;
             gap:20px;
-            min-height: calc(100vh - 80px);
+            min-height:calc(100vh - 80px);
             overflow-x:auto;
             padding:20px
         }
@@ -1098,6 +1098,15 @@
             }
         }
 
+        .chart-container {
+            background:#fff;
+            border:1px solid #eee;
+            border-radius:8px;
+            height:250px;
+            margin-bottom:20px;
+            padding:20px
+        }
+
         .tab.active {
             background:#fff;
             border-bottom:1px solid #fff;
@@ -1116,6 +1125,10 @@
             color:#444
         }
 
+        .task-item:active,.kanban-task:active {
+            cursor:grabbing
+        }
+
         html.window-focused .tabs .tab.active {
             background:#4CAF50;
             border-color:#45a049;
@@ -1131,78 +1144,63 @@
             color:#fff
         }
 
-        .chart-container {
-            background: #fff;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            height: 250px;  /* Set fixed height */
-            margin-bottom: 20px;
-            padding: 20px;
-        }
-
-        .task-item:active,
-        .kanban-task:active {
-            cursor: grabbing;
-        }
-
         @media (hover: none) {
-            .task-item.dragging,
-            .kanban-task.dragging {
-                opacity: 0.4;
-            }
-
             .kanban-column.drag-over {
-                background: #e8f5e9;
+                background:#e8f5e9
             }
-        }
 
-        .pomodoro-controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-left: auto;
-        }
-
-        .pomodoro-count {
-            color: #666;
-            font-size: 0.9em;
-        }
-
-        .timer-display {
-            font-family: monospace;
-            color: #666;
-            min-width: 45px;
-        }
-
-        .pomodoro-button {
-            background: none;
-            border: none;
-            color: #666;
-            cursor: pointer;
-            padding: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .pomodoro-button:hover {
-            background: #f5f5f5;
-            border-radius: 4px;
+            .task-item.dragging,.kanban-task.dragging {
+                opacity:.4
+            }
         }
 
         .journal-item .journal-title svg {
-            width: 16px;
-            height: 16px;
-            vertical-align: middle;
-            margin-right: 4px;
+            width:16px;
+            height:16px;
+            vertical-align:middle;
+            margin-right:4px
         }
 
         .journal-item[data-store-type="pomodoroJournal"] {
-            background-color: #fff3e0;
+            background-color:#fff3e0
         }
 
         .journal-item[data-store-type="pomodoroJournal"] .journal-title {
-            color: #e65100;
+            color:#e65100
+        }
+
+        .pomodoro-button {
+            background:none;
+            border:none;
+            color:#666;
+            cursor:pointer;
+            padding:4px;
+            display:flex;
+            align-items:center;
+            justify-content:center
+        }
+
+        .pomodoro-button:hover {
+            background:#f5f5f5;
+            border-radius:4px
+        }
+
+        .pomodoro-controls {
+            display:flex;
+            align-items:center;
+            gap:8px;
+            margin-left:auto
+        }
+
+        .pomodoro-count {
+            color:#666;
+            font-size:.9em
+        }
+
+        .timer-display {
+            font-family:monospace;
+            color:#666;
+            min-width:45px
         }
     </style>
 </head>
@@ -4217,43 +4215,8 @@
         return daysSinceUpdate > 1 ? 0 : (habit.currentStreak || 0);
     }
 
-    async function resetAllStreaks() {
-        if (!db) return;
-
-        try {
-            const transaction = db.transaction(STORE_NAME, 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.getAll();
-
-            request.onsuccess = () => {
-                const tasks = request.result;
-                tasks.forEach(task => {
-                    if (task.resetDaily) {
-                        const updatedTask = {...task};
-                        updatedTask.currentStreak = 0;
-                        updatedTask.lastStreakUpdate = null;
-                        updatedTask.lastReset = null;
-                        // Keep the bestStreak value!
-                        // updatedTask.bestStreak stays unchanged
-                        store.put(updatedTask);
-                    }
-                });
-                loadTasks();
-                loadKanban();
-                console.log('All current streaks have been reset');
-            };
-        } catch (error) {
-            console.error('Error resetting streaks:', error);
-        }
-    }
-
     async function loadHabits() {
         if (!db) return;
-
-        // First, ensure Chart.js is loaded
-        if (typeof Chart === 'undefined') {
-            await loadChartJS();
-        }
 
         const habitsList = document.getElementById('habitsList');
         const sortSelect = document.getElementById('habitSort');
