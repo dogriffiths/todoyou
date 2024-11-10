@@ -13,1194 +13,1194 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
     <style>
         body {
-            font-family:Arial,sans-serif;
-            margin-left:0;
-            margin-right:0;
-            margin-top:0;
-            overscroll-behavior:none;
-            padding-top:0;
-            position:relative
+            font-family: Arial, sans-serif;
+            margin-left: 0;
+            margin-right: 0;
+            margin-top: 0;
+            overscroll-behavior: none;
+            padding-top: 0;
+            position: relative
         }
 
         @media (max-width: 1600px) {
             body {
-                background-size:200px 38px
+                background-size: 200px 38px
             }
         }
 
         #newTask {
-            border:1px solid #ddd;
-            border-radius:4px;
-            flex-grow:1;
-            padding:8px
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex-grow: 1;
+            padding: 8px
         }
 
         #status {
-            color:#666;
-            font-size:.9em;
-            margin-top:10px;
-            text-align:center
+            color: #666;
+            font-size: .9em;
+            margin-top: 10px;
+            text-align: center
         }
 
-        #tasks-tab,#journal-tab,.tabs {
-            margin-left:auto;
-            margin-right:auto
+        #tasks-tab, #journal-tab, .tabs {
+            margin-left: auto;
+            margin-right: auto
         }
 
         .calendar-container {
-            background:#fff;
-            border-radius:8px;
-            margin:0 auto;
-            max-width:900px;
-            padding:0;
-            width:100%
+            background: #fff;
+            border-radius: 8px;
+            margin: 0 auto;
+            max-width: 900px;
+            padding: 0;
+            width: 100%
         }
 
         .calendar-header {
-            align-items:center;
-            display:flex;
-            justify-content:space-between;
-            margin-bottom:20px;
-            max-width:940px;
-            width:100%
+            align-items: center;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            max-width: 940px;
+            width: 100%
         }
 
         .comment-date {
-            color:#888;
-            font-size:.8em
+            color: #888;
+            font-size: .8em
         }
 
         .comment-input {
-            display:flex;
-            gap:10px;
-            margin-top:10px
+            display: flex;
+            gap: 10px;
+            margin-top: 10px
         }
 
-        .comment-input input,.journal-content {
-            flex-grow:1
+        .comment-input input, .journal-content {
+            flex-grow: 1
         }
 
         .comment-item {
-            border-bottom:1px solid #eee;
-            font-size:.9em;
-            padding:8px
+            border-bottom: 1px solid #eee;
+            font-size: .9em;
+            padding: 8px
         }
 
         .comments-list {
-            margin-top:10px;
-            max-height:200px;
-            overflow-y:auto
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto
         }
 
         .delete-button {
-            background:none;
-            border:none;
-            color:#666;
-            cursor:pointer;
-            display:none;
-            opacity:.6;
-            padding:4px
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            display: none;
+            opacity: .6;
+            padding: 4px
         }
 
         .delete-button:hover {
-            color:#f44;
-            opacity:1
+            color: #f44;
+            opacity: 1
         }
 
         .delete-confirmation {
-            background:#fff;
-            border-radius:8px;
-            box-shadow:0 2px 10px #0000001a;
-            left:50%;
-            padding:20px;
-            position:fixed;
-            top:50%;
-            transform:translate(-50%,-50%);
-            z-index:1000
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px #0000001a;
+            left: 50%;
+            padding: 20px;
+            position: fixed;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000
         }
 
         .delete-confirmation-overlay {
-            align-items:center;
-            background:#00000080;
-            bottom:0;
-            display:flex;
-            justify-content:center;
-            left:0;
-            position:fixed;
-            right:0;
-            top:0;
-            z-index:999
+            align-items: center;
+            background: #00000080;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            left: 0;
+            position: fixed;
+            right: 0;
+            top: 0;
+            z-index: 999
         }
 
         .dialog {
-            background:#fff;
-            border-radius:8px;
-            max-width:500px;
-            padding:20px;
-            width:90%
+            background: #fff;
+            border-radius: 8px;
+            max-width: 500px;
+            padding: 20px;
+            width: 90%
         }
 
-        .dialog input,.dialog textarea {
-            border:1px solid #ddd;
-            border-radius:4px;
-            box-sizing:border-box;
-            margin:10px 0;
-            padding:8px;
-            width:100%
+        .dialog input, .dialog textarea {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin: 10px 0;
+            padding: 8px;
+            width: 100%
         }
 
         .dialog textarea {
-            height:100px;
-            resize:vertical
+            height: 100px;
+            resize: vertical
         }
 
         .dialog-buttons {
-            display:flex;
-            gap:10px;
-            justify-content:flex-end;
-            margin-top:20px
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px
         }
 
         .dialog-buttons button.cancel {
-            background:#666
+            background: #666
         }
 
         .dialog-overlay {
-            align-items:center;
-            background:#00000080;
-            bottom:0;
-            display:none;
-            justify-content:center;
-            left:0;
-            position:fixed;
-            right:0;
-            top:0
+            align-items: center;
+            background: #00000080;
+            bottom: 0;
+            display: none;
+            justify-content: center;
+            left: 0;
+            position: fixed;
+            right: 0;
+            top: 0
         }
 
         .dragging {
-            opacity:.5
+            opacity: .5
         }
 
         .input-container {
-            display:flex;
-            gap:10px;
-            margin-bottom:20px
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px
         }
 
         .journal-day {
-            margin-bottom:20px
+            margin-bottom: 20px
         }
 
         .journal-day-header {
-            border-bottom:2px solid #eee;
-            color:#666;
-            font-weight:700;
-            margin-bottom:10px;
-            padding:10px 0
+            border-bottom: 2px solid #eee;
+            color: #666;
+            font-weight: 700;
+            margin-bottom: 10px;
+            padding: 10px 0
         }
 
         .journal-description {
-            color:#666;
-            font-size:.9em;
-            margin-top:4px
+            color: #666;
+            font-size: .9em;
+            margin-top: 4px
         }
 
         .journal-item {
-            align-items:flex-start;
-            background:#fff;
-            border-radius:4px;
-            display:flex;
-            margin-bottom:5px;
-            padding:8px;
-            padding-right:40px;
-            position:relative
+            align-items: flex-start;
+            background: #fff;
+            border-radius: 4px;
+            display: flex;
+            margin-bottom: 5px;
+            padding: 8px;
+            padding-right: 40px;
+            position: relative
         }
 
         .journal-item .delete-button {
-            background:none;
-            border:none;
-            color:#666;
-            cursor:pointer;
-            display:block;
-            opacity:0;
-            padding:4px;
-            position:absolute;
-            right:8px;
-            top:50%;
-            transform:translateY(-50%);
-            transition:opacity .2s ease
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            display: block;
+            opacity: 0;
+            padding: 4px;
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: opacity .2s ease
         }
 
         .journal-item .delete-button:hover {
-            background:#f5f5f5;
-            border-radius:4px;
-            color:#f44
+            background: #f5f5f5;
+            border-radius: 4px;
+            color: #f44
         }
 
         .journal-item:hover .delete-button {
-            opacity:1
+            opacity: 1
         }
 
         .journal-time {
-            color:#666;
-            font-size:.9em;
-            min-width:80px
+            color: #666;
+            font-size: .9em;
+            min-width: 80px
         }
 
         .journal-title {
-            font-weight:500
+            font-weight: 500
         }
 
         .page-drop-message {
-            background:#fff;
-            border:2px dashed #4CAF50;
-            border-radius:8px;
-            box-shadow:0 2px 10px #0000001a;
-            color:#4CAF50;
-            font-size:1.2em;
-            padding:20px 40px
+            background: #fff;
+            border: 2px dashed #4CAF50;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px #0000001a;
+            color: #4CAF50;
+            font-size: 1.2em;
+            padding: 20px 40px
         }
 
         .page-drop-overlay {
-            align-items:center;
-            background:#4caf5033;
-            bottom:0;
-            display:none;
-            justify-content:center;
-            left:0;
-            pointer-events:none;
-            position:fixed;
-            right:0;
-            top:0;
-            z-index:1000
+            align-items: center;
+            background: #4caf5033;
+            bottom: 0;
+            display: none;
+            justify-content: center;
+            left: 0;
+            pointer-events: none;
+            position: fixed;
+            right: 0;
+            top: 0;
+            z-index: 1000
         }
 
         .page-drop-overlay.visible {
-            display:flex
+            display: flex
         }
 
         .tab {
-            background:none;
-            border:none;
-            color:#666;
-            cursor:pointer;
-            font-size:16px;
-            padding:10px 20px;
-            position:relative
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 10px 20px;
+            position: relative
         }
 
         .tab-content {
-            display:none
+            display: none
         }
 
         .tab.active {
-            color:#4CAF50
+            color: #4CAF50
         }
 
         .tab.active::after {
-            background:#4CAF50;
-            bottom:-2px;
-            content:'';
-            height:2px;
-            left:0;
-            position:absolute;
-            right:0
+            background: #4CAF50;
+            bottom: -2px;
+            content: '';
+            height: 2px;
+            left: 0;
+            position: absolute;
+            right: 0
         }
 
         .tab:hover {
-            color:#fff
+            color: #fff
         }
 
         .tabs {
-            -ms-overflow-style:none;
-            -webkit-overflow-scrolling:touch;
-            background:#f0f0f4;
-            border-bottom:1px solid #ccc;
-            box-sizing:border-box;
-            display:flex;
-            gap:2px;
-            height:40px;
-            margin-left:0;
-            margin-right:0;
-            max-width:100%;
-            overflow-x:auto;
-            overflow-y:hidden;
-            overscroll-behavior:none;
-            position:sticky;
-            scrollbar-width:none;
-            top:0;
-            width:100vw;
-            z-index:100
+            -ms-overflow-style: none;
+            -webkit-overflow-scrolling: touch;
+            background: #f0f0f4;
+            border-bottom: 1px solid #ccc;
+            box-sizing: border-box;
+            display: flex;
+            gap: 2px;
+            height: 40px;
+            margin-left: 0;
+            margin-right: 0;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            overscroll-behavior: none;
+            position: sticky;
+            scrollbar-width: none;
+            top: 0;
+            width: 100vw;
+            z-index: 100
         }
 
         .task-checkbox {
-            margin-right:10px
+            margin-right: 10px
         }
 
         .task-comments {
-            border-left:2px solid #eee;
-            color:#666;
-            font-size:.8em;
-            padding-left:0
+            border-left: 2px solid #eee;
+            color: #666;
+            font-size: .8em;
+            padding-left: 0
         }
 
         .task-description {
-            color:#666;
-            font-size:.8em;
-            margin-top:4px
+            color: #666;
+            font-size: .8em;
+            margin-top: 4px
         }
 
         .task-due-date {
-            color:#666;
-            font-size:.8em
+            color: #666;
+            font-size: .8em
         }
 
         .task-due-date.overdue {
-            color:#f44
+            color: #f44
         }
 
         .task-item {
-            align-items:center;
-            background:#fff;
-            border-left:4px solid transparent;
-            border-radius:4px;
-            cursor:move;
-            display:flex;
-            margin-bottom:5px;
-            min-height:27px;
-            padding:10px
+            align-items: center;
+            background: #fff;
+            border-left: 4px solid transparent;
+            border-radius: 4px;
+            cursor: move;
+            display: flex;
+            margin-bottom: 5px;
+            min-height: 27px;
+            padding: 10px
         }
 
-        .task-item:hover .delete-button,.tab-content.active {
-            display:block
+        .task-item:hover .delete-button, .tab-content.active {
+            display: block
         }
 
         .task-item[data-section="done"] {
-            border-left-color:#4caf50
+            border-left-color: #4caf50
         }
 
         .task-item[data-section="in progress"] {
-            border-left-color:#2196f3
+            border-left-color: #2196f3
         }
 
         .task-item[data-section="todo"] {
-            border-left-color:#ff9800
+            border-left-color: #ff9800
         }
 
-        .task-list,.journal-list {
-            list-style:none;
-            padding:0
+        .task-list, .journal-list {
+            list-style: none;
+            padding: 0
         }
 
         .task-metadata {
-            color:#666;
-            display:flex;
-            font-size:.8em;
-            gap:12px
+            color: #666;
+            display: flex;
+            font-size: .8em;
+            gap: 12px
         }
 
         .task-metadata span {
-            white-space:nowrap
+            white-space: nowrap
         }
 
         .task-text {
-            cursor:pointer;
-            flex-grow:1
+            cursor: pointer;
+            flex-grow: 1
         }
 
-        .todo-container,.journal-container {
-            background:#f5f5f5;
-            border-radius:8px;
-            box-shadow:0 2px 4px #0000001a;
-            margin-bottom:20px;
-            padding:20px
+        .todo-container, .journal-container {
+            background: #f5f5f5;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px #0000001a;
+            margin-bottom: 20px;
+            padding: 20px
         }
 
         button {
-            background:#4CAF50;
-            border:none;
-            border-radius:4px;
-            color:#fff;
-            cursor:pointer;
-            padding:8px 16px
+            background: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            padding: 8px 16px
         }
 
         button:hover {
-            background:#45a049
+            background: #45a049
         }
 
         @media (max-width: 960px) {
             .calendar-container {
-                margin-left:10px;
-                margin-right:10px;
-                padding:10px;
-                width:calc(100% - 40px)
+                margin-left: 10px;
+                margin-right: 10px;
+                padding: 10px;
+                width: calc(100% - 40px)
             }
         }
 
         .calendar-grid {
-            display:flex;
-            flex-direction:column
+            display: flex;
+            flex-direction: column
         }
 
         .calendar-weekdays {
-            display:grid;
-            font-weight:700;
-            gap:4px;
-            grid-template-columns:repeat(7,1fr);
-            margin-bottom:10px;
-            text-align:center
+            display: grid;
+            font-weight: 700;
+            gap: 4px;
+            grid-template-columns:repeat(7, 1fr);
+            margin-bottom: 10px;
+            text-align: center
         }
 
         @media (max-width: 960px) {
             .calendar-weekdays {
-                display:none
+                display: none
             }
         }
 
         .calendar-days {
-            display:grid;
-            gap:4px;
-            grid-template-columns:repeat(7,1fr)
+            display: grid;
+            gap: 4px;
+            grid-template-columns:repeat(7, 1fr)
         }
 
         @media (max-width: 960px) {
             .calendar-days {
-                gap:8px;
+                gap: 8px;
                 grid-template-columns:1fr
             }
         }
 
         .calendar-day {
-            border:1px solid #eee;
-            border-radius:4px;
-            display:flex;
-            flex-direction:column;
-            min-height:100px;
-            padding:8px
+            border: 1px solid #eee;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100px;
+            padding: 8px
         }
 
         @media (max-width: 960px) {
             .calendar-day {
-                align-items:flex-start;
-                flex-direction:row;
-                gap:12px;
-                min-height:auto
+                align-items: flex-start;
+                flex-direction: row;
+                gap: 12px;
+                min-height: auto
             }
 
             .calendar-day .day-header {
-                display:flex;
-                flex-direction:column;
-                min-width:100px
+                display: flex;
+                flex-direction: column;
+                min-width: 100px
             }
 
             .calendar-day .weekday-label {
-                color:#666;
-                display:block;
-                font-size:.8em;
-                margin-bottom:2px
+                color: #666;
+                display: block;
+                font-size: .8em;
+                margin-bottom: 2px
             }
 
             .calendar-day.different-month {
-                display:none
+                display: none
             }
         }
 
         .calendar-day-tasks {
-            flex-grow:1;
-            font-size:.8em;
-            margin-top:4px;
-            overflow:hidden
+            flex-grow: 1;
+            font-size: .8em;
+            margin-top: 4px;
+            overflow: hidden
         }
 
         .calendar-day.has-tasks {
-            background:#c8e6c9
+            background: #c8e6c9
         }
 
         .calendar-day.today {
-            background:#e8f5e9;
-            font-weight:700
+            background: #e8f5e9;
+            font-weight: 700
         }
 
         .calendar-day:hover {
-            background:#f5f5f5
+            background: #f5f5f5
         }
 
         @media (max-width: 768px) {
             .calendar-day-tasks {
-                margin-top:0;
-                max-width:none
+                margin-top: 0;
+                max-width: none
             }
 
             .calendar-day-tasks div {
-                margin-bottom:4px;
-                max-width:none;
-                white-space:normal
+                margin-bottom: 4px;
+                max-width: none;
+                white-space: normal
             }
         }
 
         .autocomplete-container {
-            display:flex;
-            flex:1;
-            position:relative
+            display: flex;
+            flex: 1;
+            position: relative
         }
 
         .autocomplete-container input {
-            flex:1;
-            width:100%
+            flex: 1;
+            width: 100%
         }
 
         .best-streak {
-            background:#e8f5e9;
-            color:#2e7d32
+            background: #e8f5e9;
+            color: #2e7d32
         }
 
         .clear-filter {
-            background:#666;
-            border:none;
-            border-radius:4px;
-            color:#fff;
-            cursor:pointer;
-            font-size:.9em;
-            padding:6px 12px
+            background: #666;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            font-size: .9em;
+            padding: 6px 12px
         }
 
         .clear-filter:hover {
-            background:#555
+            background: #555
         }
 
         .context-badge {
-            background:#e0e0e0;
-            border-radius:12px;
-            color:#666;
-            display:inline-block;
-            font-size:.8em;
-            margin-right:8px;
-            padding:4px 8px
+            background: #e0e0e0;
+            border-radius: 12px;
+            color: #666;
+            display: inline-block;
+            font-size: .8em;
+            margin-right: 8px;
+            padding: 4px 8px
         }
 
         .context-select {
-            border:1px solid #ddd;
-            border-radius:4px;
-            cursor:pointer;
-            min-width:150px;
-            padding:6px
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            min-width: 150px;
+            padding: 6px
         }
 
         .current-streak {
-            background:#e3f2fd;
-            color:#1976d2
+            background: #e3f2fd;
+            color: #1976d2
         }
 
         .daily-habit-container {
-            align-items:center;
-            align-items:center;
-            display:flex;
-            display:flex;
-            flex:1;
-            gap:4px;
-            gap:8px;
-            margin-right:8px
+            align-items: center;
+            align-items: center;
+            display: flex;
+            display: flex;
+            flex: 1;
+            gap: 4px;
+            gap: 8px;
+            margin-right: 8px
         }
 
         .daily-habit-icon {
-            align-items:center;
-            align-items:center;
-            background:#e8f5e9;
-            background:#e8f5e9;
-            border-radius:12px;
-            border-radius:12px;
-            color:#2e7d32;
-            color:#2e7d32;
-            display:flex;
-            display:flex;
-            font-size:.8em;
-            font-size:.8em;
-            gap:4px;
-            gap:4px;
-            padding:2px 8px;
-            padding:2px 8px
+            align-items: center;
+            align-items: center;
+            background: #e8f5e9;
+            background: #e8f5e9;
+            border-radius: 12px;
+            border-radius: 12px;
+            color: #2e7d32;
+            color: #2e7d32;
+            display: flex;
+            display: flex;
+            font-size: .8em;
+            font-size: .8em;
+            gap: 4px;
+            gap: 4px;
+            padding: 2px 8px;
+            padding: 2px 8px
         }
 
         .daily-habit-icon span {
-            align-items:center;
-            display:inline-flex
+            align-items: center;
+            display: inline-flex
         }
 
         .data-button {
-            align-items:center;
-            background:#fff;
-            border:1px solid #ddd;
-            border-radius:4px;
-            color:#666;
-            cursor:pointer;
-            display:inline-flex;
-            font-size:.9em;
-            gap:6px;
-            padding:6px 12px;
-            transition:all .2s ease
+            align-items: center;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            color: #666;
+            cursor: pointer;
+            display: inline-flex;
+            font-size: .9em;
+            gap: 6px;
+            padding: 6px 12px;
+            transition: all .2s ease
         }
 
         .data-button svg {
-            height:16px;
-            width:16px
+            height: 16px;
+            width: 16px
         }
 
         .data-button:hover {
-            background:#f0f0f0;
-            border-color:#ccc
+            background: #f0f0f0;
+            border-color: #ccc
         }
 
         .data-buttons {
-            display:flex;
-            gap:8px
+            display: flex;
+            gap: 8px
         }
 
         .filter-container {
-            align-items:center;
-            display:flex;
-            gap:10px;
-            margin-bottom:15px
+            align-items: center;
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px
         }
 
         .form-group .daily-habit-label {
-            align-items:center;
-            align-items:center;
-            color:#2e7d32;
-            color:#2e7d32;
-            display:flex;
-            display:flex;
-            font-size:.9em;
-            font-size:.9em;
-            gap:8px;
-            gap:8px
+            align-items: center;
+            align-items: center;
+            color: #2e7d32;
+            color: #2e7d32;
+            display: flex;
+            display: flex;
+            font-size: .9em;
+            font-size: .9em;
+            gap: 8px;
+            gap: 8px
         }
 
         .habit-description {
-            color:#666;
-            color:#666;
-            font-size:.9em;
-            font-size:.9em
+            color: #666;
+            color: #666;
+            font-size: .9em;
+            font-size: .9em
         }
 
         .habit-info {
-            flex-grow:1;
-            flex-grow:1
+            flex-grow: 1;
+            flex-grow: 1
         }
 
         .habit-item {
-            align-items:center;
-            align-items:center;
-            background:#fff;
-            background:#fff;
-            border-left:4px solid #4CAF50;
-            border-left:4px solid #4CAF50;
-            border-radius:4px;
-            border-radius:4px;
-            display:flex;
-            display:flex;
-            justify-content:space-between;
-            justify-content:space-between;
-            margin-bottom:10px;
-            margin-bottom:10px;
-            padding:15px;
-            padding:15px
+            align-items: center;
+            align-items: center;
+            background: #fff;
+            background: #fff;
+            border-left: 4px solid #4CAF50;
+            border-left: 4px solid #4CAF50;
+            border-radius: 4px;
+            border-radius: 4px;
+            display: flex;
+            display: flex;
+            justify-content: space-between;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            margin-bottom: 10px;
+            padding: 15px;
+            padding: 15px
         }
 
         .habit-last-update {
-            color:#666;
-            color:#666;
-            font-size:.8em;
-            font-size:.8em;
-            margin-top:4px;
-            margin-top:4px
+            color: #666;
+            color: #666;
+            font-size: .8em;
+            font-size: .8em;
+            margin-top: 4px;
+            margin-top: 4px
         }
 
         .habit-name {
-            font-weight:500;
-            font-weight:500;
-            margin-bottom:4px;
-            margin-bottom:4px
+            font-weight: 500;
+            font-weight: 500;
+            margin-bottom: 4px;
+            margin-bottom: 4px
         }
 
         .habit-sort {
-            background:#fff;
-            border:1px solid #ddd;
-            border-radius:4px;
-            padding:6px
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 6px
         }
 
         .habit-stats {
-            align-items:center;
-            display:flex;
-            gap:16px
+            align-items: center;
+            display: flex;
+            gap: 16px
         }
 
         .habit-streak {
-            align-items:center;
-            background:#e8f5e9;
-            border-radius:12px;
-            color:#2e7d32;
-            display:flex;
-            font-weight:700;
-            gap:6px;
-            padding:4px 12px
+            align-items: center;
+            background: #e8f5e9;
+            border-radius: 12px;
+            color: #2e7d32;
+            display: flex;
+            font-weight: 700;
+            gap: 6px;
+            padding: 4px 12px
         }
 
         .habit-streak-icon {
-            color:#ff6b6b
+            color: #ff6b6b
         }
 
         .habits-container {
-            background:#f5f5f5;
-            border-radius:8px;
-            box-shadow:0 2px 4px #0000001a;
-            padding:20px
+            background: #f5f5f5;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px #0000001a;
+            padding: 20px
         }
 
         .habits-header {
-            align-items:center;
-            display:flex;
-            justify-content:space-between;
-            margin-bottom:20px
+            align-items: center;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px
         }
 
         .kanban-column {
-            background:#f5f5f5;
-            border-radius:8px;
-            display:flex;
-            flex:1;
-            flex-direction:column;
-            min-width:300px;
-            padding:16px
+            background: #f5f5f5;
+            border-radius: 8px;
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-width: 300px;
+            padding: 16px
         }
 
         .kanban-column-content {
-            flex:1;
-            min-height:100px
+            flex: 1;
+            min-height: 100px
         }
 
         .kanban-column-header {
-            border-bottom:2px solid #ddd;
-            font-size:1.2em;
-            font-weight:700;
-            margin-bottom:16px;
-            padding-bottom:8px
+            border-bottom: 2px solid #ddd;
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding-bottom: 8px
         }
 
-        .kanban-column.drag-over,.suggestion-item.selected {
-            background:#e8f5e9
+        .kanban-column.drag-over, .suggestion-item.selected {
+            background: #e8f5e9
         }
 
         .kanban-container {
-            display:flex;
-            gap:20px;
-            min-height:calc(100vh - 80px);
-            overflow-x:auto;
-            padding:20px
+            display: flex;
+            gap: 20px;
+            min-height: calc(100vh - 80px);
+            overflow-x: auto;
+            padding: 20px
         }
 
         .kanban-placeholder {
-            border:2px dashed #ccc;
-            border-radius:4px;
-            height:80px;
-            margin-bottom:8px
+            border: 2px dashed #ccc;
+            border-radius: 4px;
+            height: 80px;
+            margin-bottom: 8px
         }
 
         .kanban-task {
-            background:#fff;
-            border-radius:4px;
-            box-shadow:0 1px 3px #0000001a;
-            cursor:move;
-            margin-bottom:8px;
-            padding:12px
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px #0000001a;
+            cursor: move;
+            margin-bottom: 8px;
+            padding: 12px
         }
 
         .kanban-task-description {
-            color:#666;
-            font-size:.9em
+            color: #666;
+            font-size: .9em
         }
 
         .kanban-task-title {
-            font-weight:500;
-            margin-bottom:4px
+            font-weight: 500;
+            margin-bottom: 4px
         }
 
         .kanban-task:hover {
-            box-shadow:0 2px 5px #0003
+            box-shadow: 0 2px 5px #0003
         }
 
         .no-habits {
-            color:#666;
-            font-style:italic;
-            padding:20px;
-            text-align:center
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+            text-align: center
         }
 
-        .sort-controls,.task-header,.streak-header {
-            align-items:center;
-            display:flex;
-            gap:8px
+        .sort-controls, .task-header, .streak-header {
+            align-items: center;
+            display: flex;
+            gap: 8px
         }
 
         .sort-direction {
-            background:#fff;
-            border:1px solid #ddd;
-            border-radius:4px;
-            cursor:pointer;
-            padding:6px 10px
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 6px 10px
         }
 
         .streak-badge {
-            align-items:center;
-            border-radius:12px;
-            display:flex;
-            font-weight:700;
-            gap:6px;
-            padding:4px 12px
+            align-items: center;
+            border-radius: 12px;
+            display: flex;
+            font-weight: 700;
+            gap: 6px;
+            padding: 4px 12px
         }
 
         .streak-chart {
-            background:#fff;
-            border:1px solid #eee;
-            border-radius:8px;
-            height:300px;
-            margin-bottom:20px;
-            padding:20px
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            height: 300px;
+            margin-bottom: 20px;
+            padding: 20px
         }
 
         .streak-count {
-            align-items:center;
-            align-items:center;
-            color:#ff6b6b;
-            color:#ff6b6b;
-            display:flex;
-            display:flex;
-            font-size:.9em;
-            font-size:.9em;
-            font-weight:700;
-            font-weight:bold
+            align-items: center;
+            align-items: center;
+            color: #ff6b6b;
+            color: #ff6b6b;
+            display: flex;
+            display: flex;
+            font-size: .9em;
+            font-size: .9em;
+            font-weight: 700;
+            font-weight: bold
         }
 
         .suggestion-item {
-            border-bottom:1px solid #eee;
-            cursor:pointer;
-            padding:8px 16px
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            padding: 8px 16px
         }
 
         .suggestion-item:hover {
-            background:#f5f5f5
+            background: #f5f5f5
         }
 
         .suggestion-item:last-child {
-            border-bottom:none
+            border-bottom: none
         }
 
         .suggestions-container {
-            background:#fff;
-            border:1px solid #ddd;
-            border-radius:4px;
-            box-shadow:0 2px 4px #0000001a;
-            display:none;
-            left:0;
-            max-height:200px;
-            overflow-y:auto;
-            position:absolute;
-            right:0;
-            top:calc(100% + 4px);
-            z-index:1000
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px #0000001a;
+            display: none;
+            left: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 4px);
+            z-index: 1000
         }
 
         .task-content-wrapper {
-            display:flex;
-            flex:1;
-            flex-direction:column
+            display: flex;
+            flex: 1;
+            flex-direction: column
         }
 
         .task-dot {
-            background:#4CAF50;
-            border-radius:50%;
-            height:6px;
-            margin:2px auto;
-            width:6px
+            background: #4CAF50;
+            border-radius: 50%;
+            height: 6px;
+            margin: 2px auto;
+            width: 6px
         }
 
         .task-item {
-            align-items:center;
-            background:#fff;
-            border-left:4px solid transparent;
-            border-radius:4px;
-            cursor:move;
-            display:flex;
-            gap:10px;
-            margin-bottom:5px;
-            padding:10px
+            align-items: center;
+            background: #fff;
+            border-left: 4px solid transparent;
+            border-radius: 4px;
+            cursor: move;
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+            padding: 10px
         }
 
         .trophy-icon {
-            color:#FFD700;
-            font-size:24px
+            color: #FFD700;
+            font-size: 24px
         }
 
         @media (max-width: 768px) {
             .habit-item {
-                align-items:flex-start;
-                flex-direction:column;
-                gap:12px
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 12px
             }
 
             .habit-stats {
-                justify-content:flex-start;
-                width:100%
+                justify-content: flex-start;
+                width: 100%
             }
         }
 
         .data-button {
-            align-items:center;
-            background:#fff;
-            border:1px solid #ddd;
-            border-radius:4px;
-            color:#666;
-            cursor:pointer;
-            display:inline-flex;
-            font-size:.9em;
-            gap:6px;
-            padding:6px 12px;
-            transition:all .2s ease
+            align-items: center;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            color: #666;
+            cursor: pointer;
+            display: inline-flex;
+            font-size: .9em;
+            gap: 6px;
+            padding: 6px 12px;
+            transition: all .2s ease
         }
 
         .data-button svg {
-            height:16px;
-            width:16px
+            height: 16px;
+            width: 16px
         }
 
         .data-button:hover {
-            background:#f0f0f0;
-            border-color:#ccc
+            background: #f0f0f0;
+            border-color: #ccc
         }
 
         .floating-toolbar {
-            background:#fff;
-            border:1px solid #ddd;
-            border-radius:8px;
-            bottom:16px;
-            box-shadow:0 2px 10px #0000001a;
-            display:flex;
-            gap:8px;
-            padding:8px;
-            position:fixed;
-            right:16px;
-            z-index:1000;
-            z-index:101
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            bottom: 16px;
+            box-shadow: 0 2px 10px #0000001a;
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            position: fixed;
+            right: 16px;
+            z-index: 1000;
+            z-index: 101
         }
 
         .save-button {
-            position:relative
+            position: relative
         }
 
         .tab {
-            align-items:center;
-            background:#e0e0e6;
-            border:none;
-            border-radius:8px 8px 0 0;
-            color:#666;
-            cursor:pointer;
-            display:flex;
-            flex:1;
-            font-size:13px;
-            height:32px;
-            justify-content:center;
-            margin-left:1px;
-            max-width:200px;
-            min-width:100px;
-            padding:0 16px;
-            position:relative;
-            transition:background-color .2s;
-            white-space:nowrap
+            align-items: center;
+            background: #e0e0e6;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            color: #666;
+            cursor: pointer;
+            display: flex;
+            flex: 1;
+            font-size: 13px;
+            height: 32px;
+            justify-content: center;
+            margin-left: 1px;
+            max-width: 200px;
+            min-width: 100px;
+            padding: 0 16px;
+            position: relative;
+            transition: background-color .2s;
+            white-space: nowrap
         }
 
         .tab-content {
-            margin-top:0
+            margin-top: 0
         }
 
         .tab.active {
-            background:#fff;
-            border-bottom:1px solid #fff;
-            border-left:1px solid #ccc;
-            border-right:1px solid #ccc;
-            border-top:1px solid #ccc;
-            color:#444;
-            font-weight:500;
-            height:33px;
-            margin-bottom:-1px
+            background: #fff;
+            border-bottom: 1px solid #fff;
+            border-left: 1px solid #ccc;
+            border-right: 1px solid #ccc;
+            border-top: 1px solid #ccc;
+            color: #444;
+            font-weight: 500;
+            height: 33px;
+            margin-bottom: -1px
         }
 
         .tab.active::after {
-            background:#4CAF50;
-            bottom:-10px;
-            content:'';
-            height:2px;
-            left:0;
-            position:absolute;
-            right:0
+            background: #4CAF50;
+            bottom: -10px;
+            content: '';
+            height: 2px;
+            left: 0;
+            position: absolute;
+            right: 0
         }
 
         .tab:hover {
-            background:#4caf501a;
-            border-radius:4px;
-            color:#4CAF50
+            background: #4caf501a;
+            border-radius: 4px;
+            color: #4CAF50
         }
 
         .tab:not(.active):hover {
-            background:#d7d7db;
-            color:#444
+            background: #d7d7db;
+            color: #444
         }
 
         .tabs {
-            -ms-overflow-style:none;
-            -webkit-overflow-scrolling:touch;
-            border-bottom:2px solid #eee;
-            box-sizing:border-box;
-            display:flex;
-            overflow-x:auto;
-            overflow-y:hidden;
-            padding-bottom:0;
-            padding-left:8px;
-            padding-top:8px;
-            position:sticky;
-            scrollbar-width:none;
-            top:0;
-            width:100%;
-            z-index:100
+            -ms-overflow-style: none;
+            -webkit-overflow-scrolling: touch;
+            border-bottom: 2px solid #eee;
+            box-sizing: border-box;
+            display: flex;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0;
+            padding-left: 8px;
+            padding-top: 8px;
+            position: sticky;
+            scrollbar-width: none;
+            top: 0;
+            width: 100%;
+            z-index: 100
         }
 
         .tabs::-webkit-scrollbar {
-            display:none
+            display: none
         }
 
         [data-window-dirty="true"] .save-button {
-            background-color:#4CAF50;
-            box-shadow:0 0 0 2px #4caf504d;
-            color:#fff
+            background-color: #4CAF50;
+            box-shadow: 0 0 0 2px #4caf504d;
+            color: #fff
         }
 
         [data-window-dirty="true"] .save-button svg {
-            color:#fff
+            color: #fff
         }
 
         @media (max-width: 768px) {
             .tab {
-                min-width:80px
+                min-width: 80px
             }
 
             .tabs {
-                padding:8px 16px 0
+                padding: 8px 16px 0
             }
         }
 
         .chart-container {
-            background:#fff;
-            border:1px solid #eee;
-            border-radius:8px;
-            height:250px;
-            margin-bottom:20px;
-            padding:20px
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            height: 250px;
+            margin-bottom: 20px;
+            padding: 20px
         }
 
         .tab.active {
-            background:#fff;
-            border-bottom:1px solid #fff;
-            border-left:1px solid #ccc;
-            border-right:1px solid #ccc;
-            border-top:1px solid #ccc;
-            color:#444;
-            font-weight:500;
-            height:33px;
-            margin-bottom:-1px;
-            transition:all .2s ease
+            background: #fff;
+            border-bottom: 1px solid #fff;
+            border-left: 1px solid #ccc;
+            border-right: 1px solid #ccc;
+            border-top: 1px solid #ccc;
+            color: #444;
+            font-weight: 500;
+            height: 33px;
+            margin-bottom: -1px;
+            transition: all .2s ease
         }
 
         .tab:not(.active):hover {
-            background:#d7d7db;
-            color:#444
+            background: #d7d7db;
+            color: #444
         }
 
-        .task-item:active,.kanban-task:active {
-            cursor:grabbing
+        .task-item:active, .kanban-task:active {
+            cursor: grabbing
         }
 
         html.window-focused .tabs .tab.active {
-            background:#4CAF50;
-            border-color:#45a049;
-            color:#fff
+            background: #4CAF50;
+            border-color: #45a049;
+            color: #fff
         }
 
         html.window-focused .tabs .tab.active::after {
-            display:none
+            display: none
         }
 
         html.window-focused .tabs .tab.active:hover {
-            background:#45a049;
-            color:#fff
+            background: #45a049;
+            color: #fff
         }
 
         @media (hover: none) {
             .kanban-column.drag-over {
-                background:#e8f5e9
+                background: #e8f5e9
             }
 
-            .task-item.dragging,.kanban-task.dragging {
-                opacity:.4
+            .task-item.dragging, .kanban-task.dragging {
+                opacity: .4
             }
         }
 
         .journal-item .journal-title svg {
-            width:16px;
-            height:16px;
-            vertical-align:middle;
-            margin-right:4px
+            width: 16px;
+            height: 16px;
+            vertical-align: middle;
+            margin-right: 4px
         }
 
         .journal-item[data-store-type="pomodoroJournal"] {
-            background-color:#fff3e0
+            background-color: #fff3e0
         }
 
         .journal-item[data-store-type="pomodoroJournal"] .journal-title {
-            color:#e65100
+            color: #e65100
         }
 
         .pomodoro-button {
-            background:none;
-            border:none;
-            color:#666;
-            cursor:pointer;
-            padding:4px;
-            display:flex;
-            align-items:center;
-            justify-content:center
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center
         }
 
         .pomodoro-button:hover {
-            background:#f5f5f5;
-            border-radius:4px
+            background: #f5f5f5;
+            border-radius: 4px
         }
 
         .pomodoro-controls {
-            display:flex;
-            align-items:center;
-            gap:8px;
-            margin-left:auto
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto
         }
 
         .pomodoro-count {
-            color:#666;
-            font-size:.9em
+            color: #666;
+            font-size: .9em
         }
 
         .timer-display {
-            font-family:monospace;
-            color:#666;
-            min-width:45px
+            font-family: monospace;
+            color: #666;
+            min-width: 45px
         }
 
         .copy-button {
@@ -1238,6 +1238,44 @@
                 margin-left: 0; /* Reset margin on mobile */
             }
         }
+
+        .reset-options {
+            margin: 16px 0;
+        }
+
+        .reset-header {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .reset-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23666%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 16px;
+            padding-right: 32px;
+        }
+
+        .reset-select:hover {
+            border-color: #bbb;
+        }
+
+        .reset-select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -1252,7 +1290,8 @@
         Save
     </button>
     <label class="data-button" title="CMD/CTRL-O">
-        <input type="file" id="importInput" accept=".json,.txt,.csv,.opml,.org" style="display: none;" onchange="handleImport(event)">
+        <input type="file" id="importInput" accept=".json,.txt,.csv,.opml,.org" style="display: none;"
+               onchange="handleImport(event)">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -1282,7 +1321,8 @@
             </select>
             <button id="clearFilter" class="clear-filter" style="display: none;">Clear Filter</button>
             <button onclick="copyTasks()" class="copy-button" title="Copy all tasks">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg>
@@ -1454,7 +1494,7 @@
     let touchOffsetX = 0;
     let touchOffsetY = 0;
     let touchStartTime = 0;
-    let touchStartPosition = { x: 0, y: 0 };
+    let touchStartPosition = {x: 0, y: 0};
     const TOUCH_DELAY = 200; // Time to wait before initiating drag
     const TOUCH_MOVE_THRESHOLD = 10; // Pixels of movement required to initiate drag
     let activeTimer = null;
@@ -1741,16 +1781,12 @@
                 const tasks = request.result;
                 const contextFilter = document.getElementById('contextFilter');
                 const selectedContext = contextFilter.value;
-                const today = new Date().toISOString().split('T')[0];
+                const todayStr = new Date().toISOString().split('T')[0];
 
-                // Filter tasks based on completion status and reset rules
+                // Filter tasks based on completion status only
                 const visibleTasks = tasks.filter(task => {
-                    // Daily reset tasks should only be hidden if lastReset matches today
-                    if (task.resetDaily) {
-                        const isCompletedToday = task.lastReset === today;
-                        return !isCompletedToday;
-                    }
-                    return true;
+                    // For both daily and workday habits
+                    return task.lastReset !== todayStr;
                 });
 
                 // Apply context filter if selected
@@ -1848,10 +1884,12 @@
 
         const contextMatch = taskText.match(/@(\w+)/);
         const resetDailyMatch = taskText.match(/\[daily\]/i);
+        const resetWorkdayMatch = taskText.match(/\[workday\]/i);
         const context = contextMatch ? contextMatch[1] : null;
         const cleanText = taskText
             .replace(/@\w+/, '')
             .replace(/\[daily\]/i, '')
+            .replace(/\[workday\]/i, '')
             .trim();
 
         try {
@@ -1870,6 +1908,7 @@
                     section: 'todo',
                     created: new Date().toISOString(),
                     resetDaily: !!resetDailyMatch,
+                    resetWorkday: !!resetWorkdayMatch,
                     lastReset: null
                 };
 
@@ -1882,7 +1921,6 @@
                     taskList.appendChild(li);
                     input.value = '';
 
-                    // Update both the context filter and autocomplete lists
                     await updateContextsList();
                     await updateContextFilter();
 
@@ -2000,12 +2038,26 @@
         li.dataset.position = task.position;
         li.dataset.section = task.section || 'todo';
 
+        // Add drag and drop event listeners
+        li.addEventListener('dragstart', handleDragStart);
+        li.addEventListener('dragend', handleDragEnd);
+        li.addEventListener('dragover', handleDragOver);
+        li.addEventListener('drop', handleDrop);
+
+        // Determine if checkbox should be disabled (for workday tasks on weekends)
+        const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
+        const isDisabled = task.resetWorkday && isWeekend;
+
         // Checkbox first
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'task-checkbox';
+        if (isDisabled) {
+            checkbox.disabled = true;
+            checkbox.title = 'Workday tasks can only be completed Monday-Friday';
+        }
         checkbox.onclick = function () {
-            if (this.checked) {
+            if (this.checked && !isDisabled) {
                 deleteTask(task.id);
             }
         };
@@ -2018,19 +2070,36 @@
         // Header section with title and habit indicator
         const taskHeader = document.createElement('div');
         taskHeader.className = 'task-header';
+        taskHeader.style.display = 'flex';
+        taskHeader.style.alignItems = 'center';
+        taskHeader.style.gap = '8px';
+
+        // Left side of header (title and habit info)
+        const titleSection = document.createElement('div');
+        titleSection.style.flex = '1';
 
         // Task text
         const titleSpan = document.createElement('span');
         titleSpan.textContent = task.text;
-        taskHeader.appendChild(titleSpan);
+        titleSection.appendChild(titleSpan);
 
-        // Daily habit indicator and streak if applicable
-        if (task.resetDaily) {
+        // Daily habit or workday habit indicator and streak
+        if (task.resetDaily || task.resetWorkday) {
             const habitIcon = document.createElement('div');
             habitIcon.className = 'daily-habit-icon';
-            habitIcon.innerHTML = '<span>📅 Daily habit</span>';
-            habitIcon.title = 'This task resets daily at midnight';
-            taskHeader.appendChild(habitIcon);
+
+            if (task.resetWorkday) {
+                habitIcon.innerHTML = '<span>💼 Work-day habit</span>';
+                if (isWeekend) {
+                    habitIcon.innerHTML += ' <span style="color: #666">(resumes Monday)</span>';
+                }
+                habitIcon.title = 'This task can only be completed Monday-Friday';
+            } else {
+                habitIcon.innerHTML = '<span>📅 Daily habit</span>';
+                habitIcon.title = 'This task resets daily at midnight';
+            }
+
+            titleSection.appendChild(habitIcon);
 
             // Add streak if applicable
             if (task.currentStreak > 0 && task.lastStreakUpdate) {
@@ -2043,28 +2112,62 @@
                 const todayDate = today.toISOString().split('T')[0];
                 const yesterdayDate = yesterday.toISOString().split('T')[0];
 
-                if (lastUpdateDate === todayDate || lastUpdateDate === yesterdayDate) {
+                // For workday habits, also check if we're not on a weekend
+                let showStreak = task.resetDaily ?
+                    (lastUpdateDate === todayDate || lastUpdateDate === yesterdayDate) :
+                    (lastUpdateDate === todayDate ||
+                        (lastUpdateDate === yesterdayDate && !isWeekend) ||
+                        (today.getDay() <= 1 && lastUpdate.getDay() === 5)); // Show streak over weekend if completed Friday
+
+                if (showStreak) {
                     const streakSpan = document.createElement('div');
                     streakSpan.className = 'streak-count';
                     streakSpan.title = `${task.currentStreak} day streak`;
                     streakSpan.innerHTML = `${task.currentStreak}<span style="margin-left: 2px">🔥</span>`;
-                    taskHeader.appendChild(streakSpan);
+                    titleSection.appendChild(streakSpan);
                 }
             }
         }
 
+        taskHeader.appendChild(titleSection);
+
+        // Right side of header (pomodoro controls)
+        const pomodoroContainer = document.createElement('div');
+        pomodoroContainer.className = 'pomodoro-controls';
+
+        const pomodoroCount = document.createElement('span');
+        pomodoroCount.className = 'pomodoro-count';
+        pomodoroCount.innerHTML = `🍅 ${task.pomodoros || 0}`;
+
+        const timerDisplay = document.createElement('span');
+        timerDisplay.className = 'timer-display';
+        timerDisplay.style.display = 'none';
+
+        const startButton = document.createElement('button');
+        startButton.className = 'pomodoro-button';
+        startButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+        startButton.onclick = (e) => {
+            e.stopPropagation();
+            startPomodoro(task.id, timerDisplay, startButton);
+        };
+
+        pomodoroContainer.appendChild(pomodoroCount);
+        pomodoroContainer.appendChild(timerDisplay);
+        pomodoroContainer.appendChild(startButton);
+
+        taskHeader.appendChild(pomodoroContainer);
         contentWrapper.appendChild(taskHeader);
 
-        // Description if exists
         const descSpan = document.createElement('div');
         descSpan.className = 'task-description';
-        descSpan.textContent = task.description;
+        if (task.description) {
+            descSpan.textContent = task.description;
+        }
         contentWrapper.appendChild(descSpan);
 
         // Metadata container for due date and comments
         const metadataContainer = document.createElement('div');
         metadataContainer.className = 'task-metadata';
-
 
         // Context badge if exists
         if (task.context) {
@@ -2102,7 +2205,9 @@
             contentWrapper.appendChild(metadataContainer);
         }
 
-        // Delete button
+        li.appendChild(contentWrapper);
+
+        // Add delete button
         const deleteButton = document.createElement('button');
         deleteButton.className = 'delete-button ml-2';
         deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
@@ -2110,45 +2215,13 @@
             e.stopPropagation();
             confirmDelete(task);
         };
-
-        li.appendChild(contentWrapper);
         li.appendChild(deleteButton);
 
-        // Add click handler for the whole task
+        // Make content wrapper clickable for editing
         contentWrapper.onclick = () => openEditDialog(task);
 
-        // Add drag and drop handlers
-        li.addEventListener('dragstart', handleDragStart);
-        li.addEventListener('dragend', handleDragEnd);
-        li.addEventListener('dragover', handleDragOver);
-        li.addEventListener('drop', handleDrop);
-
-        // Add Pomodoro controls
-        const pomodoroContainer = document.createElement('div');
-        pomodoroContainer.className = 'pomodoro-controls';
-
-        const pomodoroCount = document.createElement('span');
-        pomodoroCount.className = 'pomodoro-count';
-        pomodoroCount.innerHTML = `🍅 ${task.pomodoros || 0}`;
-
-        const timerDisplay = document.createElement('span');
-        timerDisplay.className = 'timer-display';
-        timerDisplay.style.display = 'none';
-
-        const startButton = document.createElement('button');
-        startButton.className = 'pomodoro-button';
-        startButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
-        startButton.onclick = (e) => {
-            e.stopPropagation();
-            startPomodoro(task.id, timerDisplay, startButton);
-        };
-
-        pomodoroContainer.appendChild(pomodoroCount);
-        pomodoroContainer.appendChild(timerDisplay);
-        pomodoroContainer.appendChild(startButton);
-
-        // Add pomodoro container to task
-        li.appendChild(pomodoroContainer);
+        // Add touch drag handlers for mobile
+        addTouchDragHandlers(li);
 
         return li;
     }
@@ -2179,23 +2252,26 @@
             taskDueDate.value = '';
         }
 
-        const resetDailyLabel = document.createElement('div');
-        resetDailyLabel.id = 'resetDailyContainer';
-        resetDailyLabel.className = 'form-group';
-        resetDailyLabel.style.cssText = 'display: flex; align-items: center; gap: 8px; margin: 10px 0;';
-        resetDailyLabel.innerHTML = `
-            <input type="checkbox"
-                   id="editTaskResetDaily"
-                   style="margin: 0; width: auto;"
-                   ${task.resetDaily ? 'checked' : ''}>
-            <label for="editTaskResetDaily" class="daily-habit-label">
-                <span>📅</span> Make this a daily habit
-            </label>
-        `;
+        const resetContainer = document.createElement('div');
+        resetContainer.id = 'resetDailyContainer';
+        resetContainer.className = 'form-group reset-options';
+        resetContainer.innerHTML = `
+        <label for="resetType" class="reset-header">Reset Schedule</label>
+        <select id="resetType" class="reset-select" title="Choose when this task should automatically reset">
+            <option value="none" ${(!task.resetDaily && !task.resetWorkday) ? 'selected' : ''}>
+                No automatic reset
+            </option>
+            <option value="daily" ${task.resetDaily ? 'selected' : ''}>
+                📅 Daily habit
+            </option>
+            <option value="workday" ${task.resetWorkday ? 'selected' : ''}>
+                💼 Work-day habit (Mon-Fri)
+            </option>
+        </select>
+    `;
 
-        // Insert after the first form-group
-        const firstFormGroup = dialog.querySelector('.form-group');
-        firstFormGroup.after(resetDailyLabel);
+        const contextFormGroup = document.querySelector('#editTaskContext').closest('.form-group');
+        contextFormGroup.after(resetContainer);
 
         // Load comments
         commentsList.innerHTML = '';
@@ -2274,7 +2350,7 @@
         const taskDesc = document.getElementById('editTaskDescription').value.trim();
         const taskDueDate = document.getElementById('editTaskDueDate').value;
         const taskContext = document.getElementById('editTaskContext').value.trim();
-        const resetDaily = document.getElementById('editTaskResetDaily').checked;
+        const resetType = document.getElementById('resetType').value;
 
         if (taskText === '') return;
 
@@ -2290,15 +2366,23 @@
                 task.context = taskContext || null;
                 task.dueDate = taskDueDate ? new Date(taskDueDate).toISOString() : null;
 
-                // If task is newly marked as daily reset, initialize lastReset as null
-                if (resetDaily && !task.resetDaily) {
+                // Handle reset type
+                const isNewDaily = resetType === 'daily' && !task.resetDaily;
+                const isNewWorkday = resetType === 'workday' && !task.resetWorkday;
+
+                task.resetDaily = resetType === 'daily';
+                task.resetWorkday = resetType === 'workday';
+
+                // Reset lastReset if changing to a new habit type
+                if (isNewDaily || isNewWorkday) {
                     task.lastReset = null;
                 }
-                task.resetDaily = resetDaily;
 
-                // If daily reset is being disabled, remove lastReset
-                if (!resetDaily) {
+                // Clear habit-related fields if no longer a habit
+                if (resetType === 'none') {
                     task.lastReset = null;
+                    task.currentStreak = 0;
+                    task.lastStreakUpdate = null;
                 }
 
                 store.put(task).onsuccess = () => {
@@ -2329,7 +2413,9 @@
             getRequest.onsuccess = async () => {
                 const task = getRequest.result;
                 if (task) {
-                    const today = new Date().toISOString().split('T')[0];
+                    const today = new Date();
+                    const isWeekend = today.getDay() === 0 || today.getDay() === 6;
+                    const todayStr = today.toISOString().split('T')[0];
 
                     const {id: originalId, ...taskWithoutId} = task;
                     const completedTask = {
@@ -2337,43 +2423,76 @@
                         completedAt: new Date().toISOString()
                     };
 
-                    // Inside your deleteTask function where you handle streaks
-                    if (task.resetDaily) {
-                        // Initialize streak fields if they don't exist
+                    // Handle habit tasks (daily or workday)
+                    if (task.resetDaily || task.resetWorkday) {
+                        // Skip workday habits on weekends
+                        if (task.resetWorkday && isWeekend) {
+                            console.log('Skipping workday habit completion on weekend');
+                            return;
+                        }
+
                         const updatedTask = {
                             ...task,
                             currentStreak: task.currentStreak || 0,
-                            bestStreak: task.bestStreak || 0, // Keep existing bestStreak
-                            lastStreakUpdate: task.lastStreakUpdate || null
+                            bestStreak: task.bestStreak || 0,
+                            lastStreakUpdate: task.lastStreakUpdate || null,
+                            lastReset: todayStr // Set lastReset to today when completing
                         };
 
                         const lastUpdate = updatedTask.lastStreakUpdate;
-                        const today = new Date().toISOString().split('T')[0];
-                        const yesterday = new Date();
+                        const yesterday = new Date(today);
                         yesterday.setDate(yesterday.getDate() - 1);
                         const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-                        // Update current streak
-                        if (!lastUpdate) {
-                            // First completion ever
-                            updatedTask.currentStreak = 1;
-                        } else if (lastUpdate === yesterdayStr) {
-                            // Completed on consecutive days
-                            updatedTask.currentStreak++;
-                        } else if (lastUpdate === today) {
-                            // Already completed today, keep current streak
+                        // Handle streak calculation
+                        let isConsecutive = false;
+                        if (task.resetWorkday) {
+                            if (!lastUpdate) {
+                                isConsecutive = true;
+                            } else {
+                                const lastUpdateDate = new Date(lastUpdate);
+                                const lastUpdateDay = lastUpdateDate.getDay();
+
+                                // If today is Monday, check if last update was Friday
+                                if (today.getDay() === 1) {
+                                    isConsecutive = lastUpdateDay === 5;
+                                } else {
+                                    // Otherwise, check if last update was yesterday
+                                    isConsecutive = lastUpdate === yesterdayStr;
+                                }
+                            }
                         } else {
-                            // More than a day has passed, start new streak
-                            updatedTask.currentStreak = 1;
+                            // For daily tasks, use original logic
+                            isConsecutive = !lastUpdate || lastUpdate === yesterdayStr;
                         }
 
-                        // Only update best streak if current streak exceeds it
-                        if (updatedTask.currentStreak > (updatedTask.bestStreak || 0)) {
-                            updatedTask.bestStreak = updatedTask.currentStreak;
-                        }
+                        // Update streak if haven't completed today
+                        if (!lastUpdate || lastUpdate !== todayStr) {
+                            if (isConsecutive) {
+                                updatedTask.currentStreak++;
+                            } else {
+                                updatedTask.currentStreak = 1;
+                            }
 
-                        updatedTask.lastStreakUpdate = today;
-                        updatedTask.lastReset = today;
+                            // Update best streak if current is higher
+                            if (updatedTask.currentStreak > (updatedTask.bestStreak || 0)) {
+                                updatedTask.bestStreak = updatedTask.currentStreak;
+                            }
+
+                            updatedTask.lastStreakUpdate = todayStr;
+
+                            // Log the streak update
+                            console.log('Updating streak for task:', {
+                                taskId: task.id,
+                                taskText: task.text,
+                                isWorkday: task.resetWorkday,
+                                oldStreak: task.currentStreak,
+                                newStreak: updatedTask.currentStreak,
+                                isConsecutive,
+                                lastUpdate,
+                                today: todayStr
+                            });
+                        }
 
                         // Save completed instance
                         await idb.execute(db, COMPLETED_STORE, 'readwrite',
@@ -2382,8 +2501,9 @@
                         // Update original task with new streak info
                         await idb.execute(db, STORE_NAME, 'readwrite',
                             store => idb.operations.put(store, updatedTask));
+
                     } else {
-                        // Handle non-daily tasks as before
+                        // Handle non-habit tasks as before
                         await idb.execute(db, COMPLETED_STORE, 'readwrite',
                             store => idb.operations.add(store, completedTask));
                         await idb.execute(db, STORE_NAME, 'readwrite',
@@ -2416,32 +2536,56 @@
 
             request.onsuccess = () => {
                 const tasks = request.result;
-                const today = new Date().toISOString().split('T')[0];
+                const today = new Date();
+                const isWeekend = today.getDay() === 0 || today.getDay() === 6;
+                const todayStr = today.toISOString().split('T')[0];
                 let updatesNeeded = false;
 
                 tasks.forEach(task => {
-                    if (task.resetDaily) {
+                    if (!task.lastReset) return; // Skip tasks that are already visible
+
+                    const lastResetDate = new Date(task.lastReset);
+                    const todayDate = new Date(todayStr);
+                    const daysDiff = Math.floor((todayDate - lastResetDate) / (1000 * 60 * 60 * 24));
+
+                    // For daily tasks, reset if at least one day has passed
+                    if (task.resetDaily && daysDiff >= 1) {
                         const updatedTask = {...task};
+                        updatedTask.lastReset = null;
+                        store.put(updatedTask);
+                        updatesNeeded = true;
+                    }
+                        // For workday tasks, only reset if:
+                        // 1. It's not a weekend
+                    // 2. At least one weekday has passed since last completion
+                    else if (task.resetWorkday && !isWeekend && daysDiff >= 1) {
+                        const lastResetDay = lastResetDate.getDay();
+                        const todayDay = today.getDay();
 
-                        if (task.lastReset) {
-                            const lastResetDate = new Date(task.lastReset);
-                            const todayDate = new Date(today);
-                            const daysDiff = Math.floor((todayDate - lastResetDate) / (1000 * 60 * 60 * 24));
-
-                            if (daysDiff >= 1) {
-                                // Only reset the lastReset to make task visible again
-                                // Don't reset the streak - it will be handled when the task is completed
+                        // If last reset was Friday (5), only reset on Monday
+                        if (lastResetDay === 5) {
+                            if (todayDay === 1) { // Monday
+                                const updatedTask = {...task};
                                 updatedTask.lastReset = null;
                                 store.put(updatedTask);
                                 updatesNeeded = true;
-
-                                logStreakCalculation(updatedTask, 'reset visibility at midnight', {
-                                    daysDiff,
-                                    lastResetDate: task.lastReset,
-                                    currentStreak: updatedTask.currentStreak
-                                });
                             }
                         }
+                        // For other weekdays, reset if at least one day has passed
+                        else {
+                            const updatedTask = {...task};
+                            updatedTask.lastReset = null;
+                            store.put(updatedTask);
+                            updatesNeeded = true;
+                        }
+
+                        logStreakCalculation(task, 'workday reset check', {
+                            daysDiff,
+                            lastResetDay,
+                            todayDay,
+                            lastResetDate: task.lastReset,
+                            currentStreak: task.currentStreak
+                        });
                     }
                 });
 
@@ -3920,13 +4064,13 @@
         titleSpan.style.textDecoration = 'line-through';
         textContainer.appendChild(titleSpan);
 
+        const descSpan = document.createElement('div');
+        descSpan.className = 'task-description';
         if (task.description) {
-            const descSpan = document.createElement('div');
-            descSpan.className = 'task-description';
             descSpan.textContent = task.description;
-            descSpan.style.textDecoration = 'line-through';
-            textContainer.appendChild(descSpan);
         }
+        descSpan.style.textDecoration = 'line-through';
+        textContainer.appendChild(descSpan);
 
         // Create undo button
         const undoButton = document.createElement('button');
@@ -4266,25 +4410,17 @@
         const sortDirection = document.getElementById('sortDirection');
         const chartContainer = document.querySelector('.chart-container');
 
-        const transaction = db.transaction(STORE_NAME, 'readwrite'); // Changed to readwrite
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
         const request = store.getAll();
 
         request.onsuccess = () => {
             const tasks = request.result;
-            const habits = tasks.filter(task => task.resetDaily);
-
-            // Update expired streaks in database
-            habits.forEach(habit => {
-                const currentStreak = checkExpiredStreak(habit);
-                if (currentStreak !== habit.currentStreak) {
-                    const updatedHabit = {...habit, currentStreak};
-                    store.put(updatedHabit);
-                }
-            });
+            // Include both daily and workday habits
+            const habits = tasks.filter(task => task.resetDaily || task.resetWorkday);
 
             if (habits.length === 0) {
-                habitsList.innerHTML = '<div class="no-habits">No daily habits created yet. Add a task with [daily] to create one.</div>';
+                habitsList.innerHTML = '<div class="no-habits">No habits created yet. Add a task with [daily] or [workday] to create one.</div>';
                 chartContainer.style.display = 'none';
                 return;
             }
@@ -4297,9 +4433,8 @@
 
             habits.sort((a, b) => {
                 let valA, valB;
-                switch(sortField) {
+                switch (sortField) {
                     case 'streak':
-                        // Use checked streaks for sorting
                         valA = checkExpiredStreak(a);
                         valB = checkExpiredStreak(b);
                         break;
@@ -4322,20 +4457,30 @@
 
             // Render habits list
             habitsList.innerHTML = habits.map(habit => {
-                // Check streak here for display
                 const streak = checkExpiredStreak(habit);
                 const bestStreak = habit.bestStreak || streak;
                 const lastUpdate = habit.lastStreakUpdate ?
                     new Date(habit.lastStreakUpdate).toLocaleDateString() :
                     'Not started';
 
+                // Show the appropriate habit type icon and description
+                const habitTypeIcon = habit.resetWorkday ? '💼' : '📅';
+                const habitTypeText = habit.resetWorkday ? 'Work-day habit' : 'Daily habit';
+                const habitDescription = habit.resetWorkday ?
+                    '(Resets Monday-Friday)' :
+                    '(Resets daily)';
+
                 return `
                 <div class="habit-item">
                     <div class="habit-info">
-                        <div class="habit-name">${habit.text}</div>
+                        <div class="habit-name">
+                            ${habitTypeIcon}&nbsp;<div class="name">${habit.text}</div>
+                            <span class="habit-type">${habitTypeText}</span>
+                        </div>
                         ${habit.description ?
                     `<div class="habit-description">${habit.description}</div>` :
                     ''}
+                        <div class="habit-schedule">${habitDescription}</div>
                         <div class="habit-last-update">Last completed: ${lastUpdate}</div>
                     </div>
                     <div class="habit-stats">
@@ -4353,6 +4498,30 @@
                 </div>
             `;
             }).join('');
+
+            // Add CSS for new elements
+            const styleSheet = document.createElement('style');
+            styleSheet.textContent = `
+            .habit-type {
+                font-size: 0.8em;
+                color: #666;
+                margin-left: 8px;
+            }
+
+            .habit-schedule {
+                font-size: 0.8em;
+                color: #666;
+                margin-top: 4px;
+            }
+
+            .habit-name {
+                display: flex;
+                align-items: center;
+                font-weight: 500;
+                margin-bottom: 4px;
+            }
+        `;
+            document.head.appendChild(styleSheet);
         };
     }
 
@@ -4360,7 +4529,6 @@
         const canvas = document.getElementById('streakChart');
         const ctx = canvas.getContext('2d');
 
-        // Destroy existing chart if it exists
         if (habitChart) {
             habitChart.destroy();
         }
@@ -4369,7 +4537,8 @@
         const topHabits = habits
             .map(habit => ({
                 ...habit,
-                currentStreak: checkExpiredStreak(habit) // Use checked streak for chart
+                currentStreak: checkExpiredStreak(habit),
+                label: `${habit.resetWorkday ? '💼' : '📅'} ${habit.text}`
             }))
             .sort((a, b) => (b.bestStreak || 0) - (a.bestStreak || 0))
             .slice(0, 5);
@@ -4377,7 +4546,7 @@
         habitChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: topHabits.map(habit => habit.text),
+                labels: topHabits.map(habit => habit.label),
                 datasets: [
                     {
                         label: 'Current Streak',
@@ -4408,9 +4577,9 @@
                     },
                     x: {
                         ticks: {
-                            callback: function(value) {
+                            callback: function (value) {
                                 const label = this.getLabelForValue(value);
-                                return label.length > 15 ? label.substr(0, 15) + '...' : label;
+                                return label.length > 20 ? label.substr(0, 20) + '...' : label;
                             }
                         }
                     }
@@ -4426,6 +4595,42 @@
                 }
             }
         });
+    }
+
+    function checkExpiredStreak(habit) {
+        if (!habit.lastStreakUpdate) return 0;
+
+        const lastUpdate = new Date(habit.lastStreakUpdate);
+        const now = new Date();
+
+        // For workday habits, only count weekdays
+        if (habit.resetWorkday) {
+            const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+            if (isWeekend) {
+                // On weekends, check if the last update was on Friday
+                const lastUpdateDay = lastUpdate.getDay();
+                const daysSinceUpdate = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
+
+                // If last update was Friday (5) and it's the weekend, streak is still valid
+                if (lastUpdateDay === 5 && daysSinceUpdate <= 2) {
+                    return habit.currentStreak || 0;
+                }
+            } else {
+                // On weekdays, check if the last update was yesterday or today
+                const daysSinceUpdate = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
+                if (daysSinceUpdate <= 1) {
+                    return habit.currentStreak || 0;
+                }
+            }
+        } else {
+            // For daily habits, use the original logic
+            const daysSinceUpdate = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
+            if (daysSinceUpdate <= 1) {
+                return habit.currentStreak || 0;
+            }
+        }
+
+        return 0;
     }
 
     function createGhostElement(element) {
@@ -4446,8 +4651,8 @@
 
     // Add touch event handlers to draggable elements
     function addTouchDragHandlers(element) {
-        element.addEventListener('touchstart', handleTouchStart, { passive: false });
-        element.addEventListener('touchmove', handleTouchMove, { passive: false });
+        element.addEventListener('touchstart', handleTouchStart, {passive: false});
+        element.addEventListener('touchmove', handleTouchMove, {passive: false});
         element.addEventListener('touchend', handleTouchEnd);
     }
 
@@ -4551,7 +4756,7 @@
         touchDragging = false;
         touchDragSource = null;
         touchStartTime = 0;
-        touchStartPosition = { x: 0, y: 0 };
+        touchStartPosition = {x: 0, y: 0};
     }
 
     function updateGhostPosition(x, y) {
@@ -4590,7 +4795,7 @@
 
         containers.forEach(container => {
             if (container) {
-                observer.observe(container, { childList: true });
+                observer.observe(container, {childList: true});
             }
         });
     }
@@ -5147,7 +5352,7 @@
         });
 
         const oldSetupTabs = window.setupTabs;
-        window.setupTabs = function() {
+        window.setupTabs = function () {
             oldSetupTabs();
             document.querySelector('[data-tab="habits"]').addEventListener('click', loadHabits);
         };

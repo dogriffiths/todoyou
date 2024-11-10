@@ -112,4 +112,66 @@ describe('Todo Application', () => {
         | Buy fish | Last completed: 1/8/2024 | 2          | 1             |
         `)
     });
+
+    it('should track workday streaks', () => {
+        toDoPage.newTask.set("Buy fish [workday]")
+        toDoPage.saveButton.click()
+        toDoPage.habitsTab.click()
+        toDoPage.habits.matches(table`
+        | name     | lastUpdate                  | bestStreak | currentStreak |
+        | Buy fish | Last completed: Not started | 0          | 0             |
+        `)
+        toDoPage.tasksTab.click()
+
+        cy.tick(24 * 60 * 60 * 1000); // Advance to Tuesday
+        toDoPage.tasks.item(0).checkbox.check()
+        toDoPage.habitsTab.click()
+        toDoPage.habits.matches(table`
+        | name     | lastUpdate               | bestStreak | currentStreak |
+        | Buy fish | Last completed: 1/2/2024 | 1          | 1             |
+        `)
+        toDoPage.tasksTab.click()
+
+        cy.tick(24 * 60 * 60 * 1000); // Advance to Wednesday
+        toDoPage.tasks.item(0).checkbox.check()
+        toDoPage.habitsTab.click()
+        toDoPage.habits.matches(table`
+        | name     | lastUpdate               | bestStreak | currentStreak |
+        | Buy fish | Last completed: 1/3/2024 | 2          | 2             |
+        `)
+        toDoPage.tasksTab.click()
+
+        cy.tick(24 * 60 * 60 * 1000); // Advance to Thursday
+        toDoPage.tasks.item(0).checkbox.check()
+        toDoPage.habitsTab.click()
+        toDoPage.habits.matches(table`
+        | name     | lastUpdate               | bestStreak | currentStreak |
+        | Buy fish | Last completed: 1/4/2024 | 3          | 3             |
+        `)
+        toDoPage.tasksTab.click()
+
+        cy.tick(24 * 60 * 60 * 1000); // Advance to Friday
+        toDoPage.tasks.item(0).checkbox.check()
+        toDoPage.habitsTab.click()
+        toDoPage.habits.matches(table`
+        | name     | lastUpdate               | bestStreak | currentStreak |
+        | Buy fish | Last completed: 1/5/2024 | 4          | 4             |
+        `)
+        toDoPage.tasksTab.click()
+
+        cy.tick(24 * 60 * 60 * 1000); // Advance to Saturday
+        toDoPage.tasks.item(0).checkbox.assertDisabled()
+
+        cy.tick(24 * 60 * 60 * 1000); // Advance to Sunday
+        toDoPage.tasks.item(0).checkbox.assertDisabled()
+
+        cy.tick(24 * 60 * 60 * 1000); // Advance to Monday
+        toDoPage.tasks.item(0).checkbox.check()
+        toDoPage.habitsTab.click()
+        toDoPage.habits.matches(table`
+        | name     | lastUpdate               | bestStreak | currentStreak |
+        | Buy fish | Last completed: 1/8/2024 | 5          | 5             |
+        `)
+        toDoPage.tasksTab.click()
+    });
 });

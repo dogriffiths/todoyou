@@ -3,6 +3,7 @@ import CypressWidget from "../relish-cypress/CypressWidget";
 import InputText from "../relish-cypress/InputText";
 import Comment from "./Comment";
 import Checkbox from "../relish-cypress/Checkbox";
+import DropDown from "../relish-cypress/DropDown";
 
 export default class TaskEditDialog extends CypressWidget {
     constructor(selector: string | HTMLElement, parent: Component) {
@@ -33,7 +34,7 @@ export default class TaskEditDialog extends CypressWidget {
         return new InputText('.comment-input input', this);
     }
     get reset() {
-        return new Checkbox('#editTaskResetDaily', this);
+        return new DropDown('#resetType', this);
     }
 
     get saveCommentButton() {

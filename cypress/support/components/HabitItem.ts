@@ -2,13 +2,14 @@ import Component from "../relish-core/Component";
 import CypressWidget from "../relish-cypress/CypressWidget";
 import Checkbox from "../relish-cypress/Checkbox";
 
+
 export default class HabitItem extends CypressWidget {
     constructor(selector: string | HTMLElement, parent: Component) {
         super(selector, parent);
     }
 
     get name() {
-        return new CypressWidget('.habit-name', this);
+        return new CypressWidget('.habit-name .name', this);
     }
 
     get lastUpdate() {

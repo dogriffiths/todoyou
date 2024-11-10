@@ -56,7 +56,7 @@ describe('Editing todos', () => {
         toDoPage.newTask.set("Buy fish")
         toDoPage.saveButton.click()
         toDoPage.tasks.item(0).click()
-        toDoPage.editDialog.reset.check()
+        toDoPage.editDialog.reset.set('daily')
         toDoPage.editDialog.saveButton.click()
         toDoPage.tasks.item(0).checkbox.check()
         toDoPage.tasks.assertEmpty()
