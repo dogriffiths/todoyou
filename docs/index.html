@@ -1202,6 +1202,42 @@
             color:#666;
             min-width:45px
         }
+
+        .copy-button {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #666;
+            margin-left: auto; /* Push to right side of filter container */
+        }
+
+        .copy-button:hover {
+            background: #555;
+        }
+
+        .copy-button svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .filter-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 600px) {
+            .filter-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .copy-button {
+                margin-left: 0; /* Reset margin on mobile */
+            }
+        }
     </style>
 </head>
 <body>
@@ -1245,6 +1281,13 @@
                 <option value="">All Contexts</option>
             </select>
             <button id="clearFilter" class="clear-filter" style="display: none;">Clear Filter</button>
+            <button onclick="copyTasks()" class="copy-button" title="Copy all tasks">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copy Tasks
+            </button>
         </div>
         <ul id="taskList" class="task-list">
         </ul>
@@ -5008,6 +5051,75 @@
 
         // Check pomodoro status when tab becomes visible
         document.addEventListener('visibilitychange', checkPomodoroOnVisibilityChange);
+    }
+
+    async function copyTasks() {
+        if (!db) return;
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const tasks = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            // Filter and sort tasks
+            const todoTasks = tasks
+                .filter(task => task.section === 'todo' || !task.section)
+                .sort((a, b) => a.position - b.position);
+
+            // Format tasks as text with proper indentation
+            let textOutput = '';
+            todoTasks.forEach(task => {
+                // Add task text
+                textOutput += `• ${task.text}\n`;
+
+                // Add description if it exists, with indentation and line wrapping
+                if (task.description) {
+                    const descriptionLines = task.description.split('\n');
+                    descriptionLines.forEach(line => {
+                        // Wrap long lines at 80 characters while preserving indentation
+                        const wrappedLines = line.match(/.{1,80}(\s+|$)/g) || [line];
+                        wrappedLines.forEach(wrappedLine => {
+                            textOutput += `    ${wrappedLine.trim()}\n`;
+                        });
+                    });
+                }
+
+                // Add context if it exists (indented)
+                if (task.context) {
+                    textOutput += `    @${task.context}\n`;
+                }
+
+                // Add due date if it exists (indented)
+                if (task.dueDate) {
+                    const date = new Date(task.dueDate);
+                    textOutput += `    📅 ${date.toLocaleString()}\n`;
+                }
+
+                // Add daily habit indicator if applicable (indented)
+                if (task.resetDaily) {
+                    textOutput += `    📆 Daily habit`;
+                    if (task.currentStreak > 0) {
+                        textOutput += ` (${task.currentStreak}🔥)`;
+                    }
+                    textOutput += '\n';
+                }
+
+                // Add an empty line between tasks
+                textOutput += '\n';
+            });
+
+            // Copy to clipboard
+            await navigator.clipboard.writeText(textOutput);
+            showStatus('Tasks copied to clipboard');
+
+        } catch (error) {
+            console.error('Error copying tasks:', error);
+            showStatus('Error copying tasks to clipboard', true);
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
