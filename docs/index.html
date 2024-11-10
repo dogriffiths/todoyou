@@ -5383,7 +5383,105 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    async function cleanupOldData() {
+        if (!db) {
+            console.error('Database not initialized');
+            return;
+        }
+
+        try {
+            const SIX_WEEKS_MS = 6 * 7 * 24 * 60 * 60 * 1000; // 6 weeks in milliseconds
+            const cutoffDate = new Date(Date.now() - SIX_WEEKS_MS);
+            let deletedCount = 0;
+
+            // Start a transaction for all stores we need to clean
+            const transaction = db.transaction(
+                [COMPLETED_STORE, KANBAN_JOURNAL_STORE, 'pomodoroJournal'],
+                'readwrite'
+            );
+
+            // Clean completed tasks
+            const completedStore = transaction.objectStore(COMPLETED_STORE);
+            const completedTasks = await new Promise((resolve, reject) => {
+                const request = completedStore.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            for (const task of completedTasks) {
+                const completedDate = new Date(task.completedAt);
+                if (completedDate < cutoffDate) {
+                    await new Promise((resolve, reject) => {
+                        const request = completedStore.delete(task.id);
+                        request.onsuccess = () => {
+                            deletedCount++;
+                            resolve();
+                        };
+                        request.onerror = reject;
+                    });
+                }
+            }
+
+            // Clean kanban journal entries
+            const kanbanStore = transaction.objectStore(KANBAN_JOURNAL_STORE);
+            const kanbanEntries = await new Promise((resolve, reject) => {
+                const request = kanbanStore.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            for (const entry of kanbanEntries) {
+                const entryDate = new Date(entry.timestamp);
+                if (entryDate < cutoffDate) {
+                    await new Promise((resolve, reject) => {
+                        const request = kanbanStore.delete(entry.id);
+                        request.onsuccess = () => {
+                            deletedCount++;
+                            resolve();
+                        };
+                        request.onerror = reject;
+                    });
+                }
+            }
+
+            // Clean pomodoro journal entries
+            const pomodoroStore = transaction.objectStore('pomodoroJournal');
+            const pomodoroEntries = await new Promise((resolve, reject) => {
+                const request = pomodoroStore.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            for (const entry of pomodoroEntries) {
+                const entryDate = new Date(entry.timestamp);
+                if (entryDate < cutoffDate) {
+                    await new Promise((resolve, reject) => {
+                        const request = pomodoroStore.delete(entry.id);
+                        request.onsuccess = () => {
+                            deletedCount++;
+                            resolve();
+                        };
+                        request.onerror = reject;
+                    });
+                }
+            }
+
+            // Refresh all views
+            loadTasks();
+            loadKanban();
+            loadJournal();
+            loadCompletedTasks();
+
+            console.log(`Cleanup complete. Removed ${deletedCount} old entries.`);
+            showStatus(`Removed ${deletedCount} old entries`);
+
+        } catch (error) {
+            console.error('Error during cleanup:', error);
+            showStatus('Error cleaning up old data', true);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
         setupTabs();
         setupDropZone();
         loadKanban();
@@ -5393,6 +5491,17 @@
         setupAutoReset();
         updateContextsList();
         initializeTouchDragAndDrop();
+
+        if (db) {
+            await cleanupOldData();
+        } else {
+            // If database isn't ready yet, wait for it
+            const dbOpenRequest = indexedDB.open(DB_NAME);
+            dbOpenRequest.onsuccess = async () => {
+                db = dbOpenRequest.result;
+                await cleanupOldData();
+            };
+        }
 
         if (Notification.permission !== "granted") {
             Notification.requestPermission();
