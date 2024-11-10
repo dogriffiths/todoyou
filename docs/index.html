@@ -99,7 +99,8 @@
             cursor:pointer;
             display:none;
             opacity:.6;
-            padding:4px
+            padding:4px;
+            max-height: 16px;
         }
 
         .delete-button:hover {
@@ -413,7 +414,7 @@
             border-radius:8px;
             box-shadow:0 2px 4px #0000001a;
             margin-bottom:20px;
-            padding:20px
+            padding:20px;
         }
 
         button {
@@ -923,7 +924,7 @@
             display:flex;
             gap:10px;
             margin-bottom:5px;
-            padding:10px
+            padding:10px;
         }
 
         .trophy-icon {
@@ -2195,6 +2196,16 @@
         pomodoroContainer.appendChild(timerDisplay);
         pomodoroContainer.appendChild(startButton);
 
+        // Add delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-button ml-2';
+        deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+        deleteButton.onclick = (e) => {
+            e.stopPropagation();
+            confirmDelete(task);
+        };
+
+        taskHeader.appendChild(deleteButton);
         taskHeader.appendChild(pomodoroContainer);
         contentWrapper.appendChild(taskHeader);
 
@@ -2246,16 +2257,6 @@
         }
 
         li.appendChild(contentWrapper);
-
-        // Add delete button
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'delete-button ml-2';
-        deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
-        deleteButton.onclick = (e) => {
-            e.stopPropagation();
-            confirmDelete(task);
-        };
-        li.appendChild(deleteButton);
 
         // Make content wrapper clickable for editing
         contentWrapper.onclick = () => openEditDialog(task);
