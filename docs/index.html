@@ -5300,83 +5300,10 @@
     }
 
     async function copyTasks() {
-        if (!db) return;
-
         try {
-            const transaction = db.transaction(STORE_NAME, 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const tasks = await new Promise((resolve, reject) => {
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = reject;
-            });
-
-            // Filter for incomplete tasks in the todo section and sort by position
-            const incompleteTasks = tasks
-                .filter(task => {
-                    // Check if task has lastReset field (indicates it's a habit task)
-                    if (task.resetDaily || task.resetWorkday) {
-                        const today = new Date().toISOString().split('T')[0];
-                        // Include habit tasks that haven't been completed today
-                        return task.lastReset !== today;
-                    }
-                    // For regular tasks, include those in todo section
-                    return task.section === 'todo' || !task.section;
-                })
-                .sort((a, b) => a.position - b.position);
-
-            // Format tasks as text with proper indentation
-            let textOutput = '';
-            incompleteTasks.forEach(task => {
-                // Add task text
-                textOutput += `• ${task.text}\n`;
-
-                // Add description if it exists, with indentation and line wrapping
-                if (task.description) {
-                    const descriptionLines = task.description.split('\n');
-                    descriptionLines.forEach(line => {
-                        // Wrap long lines at 80 characters while preserving indentation
-                        const wrappedLines = line.match(/.{1,80}(\s+|$)/g) || [line];
-                        wrappedLines.forEach(wrappedLine => {
-                            textOutput += `    ${wrappedLine.trim()}\n`;
-                        });
-                    });
-                }
-
-                // Add context if it exists (indented)
-                if (task.context) {
-                    textOutput += `    @${task.context}\n`;
-                }
-
-                // Add due date if it exists (indented)
-                if (task.dueDate) {
-                    const date = new Date(task.dueDate);
-                    textOutput += `    📅 ${date.toLocaleString()}\n`;
-                }
-
-                // Add habit indicators if applicable (indented)
-                if (task.resetDaily) {
-                    textOutput += `    📆 Daily habit`;
-                    if (task.currentStreak > 0) {
-                        textOutput += ` (${task.currentStreak}🔥)`;
-                    }
-                    textOutput += '\n';
-                } else if (task.resetWorkday) {
-                    textOutput += `    💼 Work-day habit`;
-                    if (task.currentStreak > 0) {
-                        textOutput += ` (${task.currentStreak}🔥)`;
-                    }
-                    textOutput += '\n';
-                }
-
-                // Add an empty line between tasks
-                textOutput += '\n';
-            });
-
-            // Copy to clipboard
-            await navigator.clipboard.writeText(textOutput);
+            const text = await getFormattedTaskText();
+            await navigator.clipboard.writeText(text);
             showStatus('Tasks copied to clipboard');
-
         } catch (error) {
             console.error('Error copying tasks:', error);
             showStatus('Error copying tasks to clipboard', true);
@@ -5481,6 +5408,77 @@
         }
     }
 
+    async function getFormattedTaskText() {
+        if (!db) return '';
+
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const tasks = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+
+            // Filter for incomplete tasks in the todo section and sort by position
+            const incompleteTasks = tasks
+                .filter(task => {
+                    if (task.resetDaily || task.resetWorkday) {
+                        const today = new Date().toISOString().split('T')[0];
+                        return task.lastReset !== today;
+                    }
+                    return task.section === 'todo' || !task.section;
+                })
+                .sort((a, b) => a.position - b.position);
+
+            // Format tasks as text
+            let textOutput = '';
+            incompleteTasks.forEach(task => {
+                textOutput += `• ${task.text}\n`;
+
+                if (task.description) {
+                    const descriptionLines = task.description.split('\n');
+                    descriptionLines.forEach(line => {
+                        const wrappedLines = line.match(/.{1,80}(\s+|$)/g) || [line];
+                        wrappedLines.forEach(wrappedLine => {
+                            textOutput += `    ${wrappedLine.trim()}\n`;
+                        });
+                    });
+                }
+
+                if (task.context) {
+                    textOutput += `    @${task.context}\n`;
+                }
+
+                if (task.dueDate) {
+                    const date = new Date(task.dueDate);
+                    textOutput += `    📅 ${date.toLocaleString()}\n`;
+                }
+
+                if (task.resetDaily) {
+                    textOutput += `    📆 Daily habit`;
+                    if (task.currentStreak > 0) {
+                        textOutput += ` (${task.currentStreak}🔥)`;
+                    }
+                    textOutput += '\n';
+                } else if (task.resetWorkday) {
+                    textOutput += `    💼 Work-day habit`;
+                    if (task.currentStreak > 0) {
+                        textOutput += ` (${task.currentStreak}🔥)`;
+                    }
+                    textOutput += '\n';
+                }
+
+                textOutput += '\n';
+            });
+
+            return textOutput;
+        } catch (error) {
+            console.error('Error formatting tasks:', error);
+            return '';
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
         setupTabs();
         setupDropZone();
@@ -5491,6 +5489,75 @@
         setupAutoReset();
         updateContextsList();
         initializeTouchDragAndDrop();
+
+        const copyButton = document.querySelector('.copy-button');
+        if (!copyButton) return;
+
+        // Make button draggable and update title
+        copyButton.setAttribute('draggable', 'true');
+        copyButton.title = 'Click to copy or drag to another application';
+
+        // Store the original onclick handler
+        const originalOnClick = copyButton.onclick;
+
+        // Remove the original click handler
+        copyButton.onclick = null;
+
+        // Add mousedown handler for drag initialization
+        copyButton.addEventListener('mousedown', async (e) => {
+            // Store the text for later use in dragstart
+            copyButton.dataset.taskText = await getFormattedTaskText();
+        });
+
+        // Add click handler that doesn't interfere with drag
+        copyButton.addEventListener('click', async (e) => {
+            if (!e.dragStart) {
+                await copyTasks();
+            }
+        });
+
+        // Handle dragstart
+        copyButton.addEventListener('dragstart', (e) => {
+            e.dragStart = true;
+
+            // Set the drag data
+            e.dataTransfer.setData('text/plain', copyButton.dataset.taskText || '');
+            e.dataTransfer.effectAllowed = 'copy';
+
+            // Create ghost image
+            const ghostElement = document.createElement('div');
+            ghostElement.className = 'drag-ghost';
+            ghostElement.style.cssText = `
+            position: absolute;
+            top: -1000px;
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            max-width: 300px;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1000;
+        `;
+            ghostElement.textContent = 'Tasks';
+
+            document.body.appendChild(ghostElement);
+            e.dataTransfer.setDragImage(ghostElement, 0, 0);
+
+            setTimeout(() => {
+                document.body.removeChild(ghostElement);
+                delete copyButton.dataset.taskText;
+            }, 0);
+        });
+
+        // Prevent dragend from triggering click
+        copyButton.addEventListener('dragend', (e) => {
+            e.preventDefault();
+            delete copyButton.dataset.taskText;
+        });
+
+
 
         if (db) {
             await cleanupOldData();
